@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- V60 Dripper - cone body (brown fill) -->
+    <path
+        android:fillColor="#A0714B"
+        android:pathData="M35,28 L73,28 L64,52 L44,52 Z" />
+
+    <!-- V60 Dripper - ridges (darker brown lines inside cone) -->
+    <path
+        android:fillColor="#7D5A3C"
+        android:pathData="M42,30 L45.5,50 L47.5,50 L44,30 Z" />
+    <path
+        android:fillColor="#7D5A3C"
+        android:pathData="M49,30 L49.5,50 L51.5,50 L52,30 Z" />
+    <path
+        android:fillColor="#7D5A3C"
+        android:pathData="M56,30 L53.5,50 L55.5,50 L58,30 Z" />
+    <path
+        android:fillColor="#7D5A3C"
+        android:pathData="M63,30 L57.5,50 L59.5,50 L65,30 Z" />
+
+    <!-- V60 Dripper - rim (thick dark top edge) -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M32,25 L76,25 L74,31 L34,31 Z" />
+
+    <!-- V60 Dripper - cone outline -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M34,28 L35,28 L44,52 L43,52 Z" />
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M73,28 L74,28 L65,52 L64,52 Z" />
+
+    <!-- V60 Dripper - bottom drip opening -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M49,52 L59,52 L57,55 L51,55 Z" />
+
+    <!-- Drip stream -->
+    <path
+        android:fillColor="#A0714B"
+        android:pathData="M52.5,55 L55.5,55 L55,60 L53,60 Z" />
+
+    <!-- Cup/Server - rim (dark band) -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M30,58 L78,58 L78,63 L30,63 Z" />
+
+    <!-- Cup/Server - body (white/light) -->
+    <path
+        android:fillColor="#F5F5F5"
+        android:pathData="M32,63 L76,63 L73,82 L35,82 Z" />
+
+    <!-- Cup/Server - coffee inside (brown liquid) -->
+    <path
+        android:fillColor="#A0714B"
+        android:pathData="M42,68 C42,68 48,73 60,68 L73,68 L71,80 L36,80 L38,68 Z" />
+
+    <!-- Cup/Server - body outline left -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M30,63 L33,63 L36,82 L33,82 Z" />
+
+    <!-- Cup/Server - body outline right -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M75,63 L78,63 L75,82 L72,82 Z" />
+
+    <!-- Cup/Server - bottom outline -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M33,80 L75,80 L75,84 L33,84 Z" />
+
+    <!-- Cup - handle -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M76,66 C82,66 84,72 82,78 C80,82 76,82 74,78 L74,75 C76,78 78,77 79,74 C80,70 78,68 76,68 Z" />
+
+</vector>
