@@ -1,6 +1,7 @@
 package com.brewmaster.presentation.screen.brew
 
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -52,6 +53,7 @@ import com.brewmaster.domain.model.StepAction
 import com.brewmaster.presentation.component.CircularProgressTimer
 import com.brewmaster.presentation.component.DynamicPhaseIndicator
 import com.brewmaster.presentation.component.StopAlertOverlay
+import com.brewmaster.service.BrewTimerService
 import com.brewmaster.presentation.theme.DarkBackground
 import com.brewmaster.presentation.theme.DarkCard
 import com.brewmaster.presentation.theme.LimeGreen
@@ -80,6 +82,19 @@ fun BrewTimerScreen(
     LaunchedEffect(Unit) {
         val calculation = BrewSession.currentCalculation ?: return@LaunchedEffect
         viewModel.startBrew(calculation)
+        startTimerService(context, calculation.steps.firstOrNull()?.name.orEmpty())
+    }
+
+    LaunchedEffect(uiState.currentStepIndex) {
+        uiState.currentStep?.let { step ->
+            updateTimerServiceStep(context, step.name)
+        }
+    }
+
+    LaunchedEffect(uiState.isFinished) {
+        if (uiState.isFinished) {
+            stopTimerService(context)
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -129,7 +144,10 @@ fun BrewTimerScreen(
                 TopBar(
                     techniqueName = calculation.technique.name,
                     totalTimeSec = calculation.totalBrewTimeSec,
-                    onBack = onNavigateBack
+                    onBack = {
+                        stopTimerService(context)
+                        onNavigateBack()
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -176,6 +194,7 @@ fun BrewTimerScreen(
             StopAlertOverlay(
                 totalVolume = calculation?.totalVolume ?: 0.0,
                 onDismiss = {
+                    stopTimerService(context)
                     viewModel.dismissStopAlert()
                     onNavigateBack()
                 }
@@ -356,6 +375,33 @@ private fun actionIcon(action: StepAction): String = when (action) {
     StepAction.EXCAVATE -> "⛏️"
     StepAction.PULSE -> "📊"
     StepAction.OSMOTIC -> "💦"
+}
+
+private fun startTimerService(context: Context, initialStepName: String) {
+    val intent = Intent(context, BrewTimerService::class.java).apply {
+        action = BrewTimerService.ACTION_START
+        putExtra(BrewTimerService.EXTRA_STEP_NAME, initialStepName)
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        context.startForegroundService(intent)
+    } else {
+        context.startService(intent)
+    }
+}
+
+private fun updateTimerServiceStep(context: Context, stepName: String) {
+    val intent = Intent(context, BrewTimerService::class.java).apply {
+        action = BrewTimerService.ACTION_UPDATE_STEP
+        putExtra(BrewTimerService.EXTRA_STEP_NAME, stepName)
+    }
+    context.startService(intent)
+}
+
+private fun stopTimerService(context: Context) {
+    val intent = Intent(context, BrewTimerService::class.java).apply {
+        action = BrewTimerService.ACTION_STOP
+    }
+    context.startService(intent)
 }
 
 private fun com.brewmaster.domain.model.BrewStep.isWaterStep(): Boolean {

@@ -69,6 +69,18 @@ class GetTechniquesUseCase @Inject constructor() {
                 defaultTempMin = 92,
                 defaultTempMax = 96,
                 totalBrewTimeSec = 180
+            ),
+            BrewTechnique(
+                id = "custom",
+                name = "Custom",
+                author = "You",
+                focus = "Your own rules",
+                description = "Design your own brewing technique with custom temperature, time, and steps",
+                defaultRatio = 15.0,
+                defaultGrind = GrindSize.MEDIUM,
+                defaultTempMin = 90,
+                defaultTempMax = 94,
+                totalBrewTimeSec = 180
             )
         )
     }

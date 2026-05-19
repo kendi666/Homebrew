@@ -27,7 +27,10 @@ class CalculateBrewUseCase @Inject constructor() {
         iceWeight: Double = 0.0,
         process: CoffeeProcess? = null,
         targetProfile: TargetProfile = TargetProfile.BALANCED,
-        bean: CoffeeBean? = null
+        bean: CoffeeBean? = null,
+        customSteps: List<com.brewmaster.domain.model.CustomStepConfig>? = null,
+        customTempMin: Int? = null,
+        customTempMax: Int? = null
     ): BrewCalculation {
         // Apply target profile ratio offset
         val adjustedRatio = (ratio + targetProfile.ratioOffset).coerceAtLeast(10.0)
@@ -45,6 +48,7 @@ class CalculateBrewUseCase @Inject constructor() {
             "rao" -> RaoEngine()
             "osmotic" -> OsmoticEngine()
             "single_cup" -> SingleCupEngine()
+            "custom" -> customSteps?.let { com.brewmaster.domain.engine.CustomEngine(it) } ?: SingleCupEngine()
             else -> SingleCupEngine()
         }
 
@@ -55,9 +59,12 @@ class CalculateBrewUseCase @Inject constructor() {
         var tempMax: Int
         val processNote: String?
 
+        val baseTempMin = customTempMin ?: technique.defaultTempMin
+        val baseTempMax = customTempMax ?: technique.defaultTempMax
+
         if (process != null) {
-            val finalTempMin = max(technique.defaultTempMin, process.tempMin)
-            val finalTempMax = min(technique.defaultTempMax, process.tempMax)
+            val finalTempMin = max(baseTempMin, process.tempMin)
+            val finalTempMax = min(baseTempMax, process.tempMax)
 
             if (finalTempMin > finalTempMax) {
                 tempMin = process.tempMin
@@ -68,8 +75,8 @@ class CalculateBrewUseCase @Inject constructor() {
             }
             processNote = process.extractionNote
         } else {
-            tempMin = technique.defaultTempMin
-            tempMax = technique.defaultTempMax
+            tempMin = baseTempMin
+            tempMax = baseTempMax
             processNote = null
         }
 
@@ -77,6 +84,12 @@ class CalculateBrewUseCase @Inject constructor() {
         tempMin = (tempMin + targetProfile.tempOffset).coerceIn(80, 100)
         tempMax = (tempMax + targetProfile.tempOffset).coerceIn(80, 100)
         if (tempMin > tempMax) tempMin = tempMax
+
+        val totalBrewTimeSec = if (technique.id == "custom" && customSteps != null) {
+            customSteps.sumOf { it.durationSec }
+        } else {
+            technique.totalBrewTimeSec
+        }
 
         return BrewCalculation(
             technique = technique,
@@ -88,7 +101,7 @@ class CalculateBrewUseCase @Inject constructor() {
             tempMax = tempMax,
             grindSize = grindSize,
             steps = steps,
-            totalBrewTimeSec = technique.totalBrewTimeSec,
+            totalBrewTimeSec = totalBrewTimeSec,
             processNote = processNote,
             targetProfile = targetProfile,
             beanName = bean?.name

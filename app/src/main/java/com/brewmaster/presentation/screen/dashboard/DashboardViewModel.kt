@@ -8,17 +8,20 @@ import com.brewmaster.domain.model.BrewTechnique
 import com.brewmaster.domain.model.CoffeeBean
 import com.brewmaster.domain.model.CoffeeProcess
 import com.brewmaster.domain.model.GrindSize
+import com.brewmaster.domain.model.PersonalRecipe
 import com.brewmaster.domain.model.TargetProfile
 import com.brewmaster.domain.usecase.CalculateBrewUseCase
 import com.brewmaster.domain.usecase.GetBeansUseCase
 import com.brewmaster.domain.usecase.GetProcessPresetsUseCase
 import com.brewmaster.domain.usecase.GetTechniquesUseCase
+import com.brewmaster.domain.usecase.SaveRecipeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 data class DashboardUiState(
@@ -35,8 +38,14 @@ data class DashboardUiState(
     val brewMode: BrewMode = BrewMode.HOT,
     val iceWeight: String = "80",
     val calculation: BrewCalculation? = null,
-    val showProcessPicker: Boolean = false,
-    val showBeanPicker: Boolean = false
+    val showBeanPicker: Boolean = false,
+    val showSaveRecipeDialog: Boolean = false,
+    val customTempMin: Int = 90,
+    val customTempMax: Int = 94,
+    val customSteps: List<com.brewmaster.domain.model.CustomStepConfig> = listOf(
+        com.brewmaster.domain.model.CustomStepConfig(com.brewmaster.domain.model.StepAction.BLOOM, 45, 0.20),
+        com.brewmaster.domain.model.CustomStepConfig(com.brewmaster.domain.model.StepAction.POUR, 135, 0.80)
+    )
 )
 
 @HiltViewModel
@@ -44,11 +53,13 @@ class DashboardViewModel @Inject constructor(
     private val calculateBrewUseCase: CalculateBrewUseCase,
     private val getTechniquesUseCase: GetTechniquesUseCase,
     private val getProcessPresetsUseCase: GetProcessPresetsUseCase,
-    private val getBeansUseCase: GetBeansUseCase
+    private val getBeansUseCase: GetBeansUseCase,
+    private val saveRecipeUseCase: SaveRecipeUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private var pendingRecipe: PersonalRecipe? = null
 
     init {
         val techniques = getTechniquesUseCase()
@@ -66,6 +77,7 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             getProcessPresetsUseCase().collect { processes ->
                 _uiState.update { it.copy(processes = processes) }
+                pendingRecipe?.let(::applyRecipe)
             }
         }
 
@@ -113,19 +125,6 @@ class DashboardViewModel @Inject constructor(
         recalculate()
     }
 
-    fun onProcessSelected(process: CoffeeProcess?) {
-        _uiState.update { it.copy(selectedProcess = process, showProcessPicker = false) }
-        recalculate()
-    }
-
-    fun onProcessPickerDismissed() {
-        _uiState.update { it.copy(showProcessPicker = false) }
-    }
-
-    fun onProcessPickerOpen() {
-        _uiState.update { it.copy(showProcessPicker = true) }
-    }
-
     fun onBeanSelected(bean: CoffeeBean?) {
         if (bean != null) {
             val matchingProcess = _uiState.value.processes.find { it.id == bean.processId }
@@ -163,6 +162,102 @@ class DashboardViewModel @Inject constructor(
         recalculate()
     }
 
+    fun onSaveRecipeOpen() {
+        _uiState.update { it.copy(showSaveRecipeDialog = true) }
+    }
+
+    fun onSaveRecipeDismissed() {
+        _uiState.update { it.copy(showSaveRecipeDialog = false) }
+    }
+
+    fun onCustomTempMinChanged(temp: Int) {
+        _uiState.update { it.copy(customTempMin = temp) }
+        recalculate()
+    }
+
+    fun onCustomTempMaxChanged(temp: Int) {
+        _uiState.update { it.copy(customTempMax = temp) }
+        recalculate()
+    }
+
+    fun onAddCustomStep(step: com.brewmaster.domain.model.CustomStepConfig) {
+        _uiState.update { it.copy(customSteps = it.customSteps + step) }
+        recalculate()
+    }
+
+    fun onRemoveCustomStep(index: Int) {
+        _uiState.update {
+            val newSteps = it.customSteps.toMutableList().apply { removeAt(index) }
+            it.copy(customSteps = newSteps)
+        }
+        recalculate()
+    }
+
+    fun onUpdateCustomStep(index: Int, step: com.brewmaster.domain.model.CustomStepConfig) {
+        _uiState.update {
+            val newSteps = it.customSteps.toMutableList().apply { this[index] = step }
+            it.copy(customSteps = newSteps)
+        }
+        recalculate()
+    }
+
+    fun saveCurrentRecipe(beanName: String, notes: String?) {
+        val state = _uiState.value
+        val technique = state.selectedTechnique ?: return
+        val coffeeWeight = parseDecimal(state.coffeeWeight) ?: return
+        val ratio = parseDecimal(state.ratio) ?: return
+        val iceWeight = if (state.brewMode == BrewMode.ICE) {
+            parseDecimal(state.iceWeight)
+        } else {
+            null
+        }
+
+        viewModelScope.launch {
+            saveRecipeUseCase(
+                PersonalRecipe(
+                    beanName = beanName,
+                    techniqueId = technique.id,
+                    processId = state.selectedProcess?.id ?: 0,
+                    grindSize = state.grindSize,
+                    ratio = ratio,
+                    coffeeWeight = coffeeWeight,
+                    isIce = state.brewMode == BrewMode.ICE,
+                    iceWeight = iceWeight,
+                    notes = notes,
+                    createdAt = System.currentTimeMillis()
+                )
+            )
+            _uiState.update { it.copy(showSaveRecipeDialog = false) }
+        }
+    }
+
+    fun loadRecipe(recipe: PersonalRecipe) {
+        pendingRecipe = recipe
+        applyRecipe(recipe)
+    }
+
+    private fun applyRecipe(recipe: PersonalRecipe) {
+        val state = _uiState.value
+        val technique = state.techniques.find { it.id == recipe.techniqueId }
+        val process = state.processes.find { it.id == recipe.processId }
+        val matchingBean = state.beans.find { it.processId == recipe.processId }
+
+        _uiState.update {
+            it.copy(
+                selectedTechnique = technique ?: it.selectedTechnique,
+                selectedProcess = process,
+                selectedBean = matchingBean,
+                coffeeWeight = formatDecimal(recipe.coffeeWeight),
+                ratio = formatDecimal(recipe.ratio),
+                grindSize = recipe.grindSize,
+                brewMode = if (recipe.isIce) BrewMode.ICE else BrewMode.HOT,
+                iceWeight = formatDecimal(recipe.iceWeight ?: 0.0)
+            )
+        }
+        pendingRecipe = null
+        recalculate()
+    }
+
     private fun applyGrindShift(base: GrindSize, shift: Int): GrindSize {
         if (shift == 0) return base
         val values = GrindSize.entries
@@ -197,13 +292,24 @@ class DashboardViewModel @Inject constructor(
             iceWeight = iceWeight,
             process = state.selectedProcess,
             targetProfile = state.targetProfile,
-            bean = state.selectedBean
+            bean = state.selectedBean,
+            customSteps = state.customSteps,
+            customTempMin = state.customTempMin,
+            customTempMax = state.customTempMax
         )
         _uiState.update { it.copy(calculation = calculation) }
     }
 
     private fun parseDecimal(value: String): Double? {
         return value.trim().replace(',', '.').toDoubleOrNull()
+    }
+
+    private fun formatDecimal(value: Double): String {
+        return if (value == value.toLong().toDouble()) {
+            value.toLong().toString()
+        } else {
+            String.format(Locale.US, "%.2f", value).trimEnd('0').trimEnd('.')
+        }
     }
 
     companion object {

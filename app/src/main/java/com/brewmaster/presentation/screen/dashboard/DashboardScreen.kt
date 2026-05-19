@@ -25,10 +25,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -48,6 +50,9 @@ import com.brewmaster.presentation.component.ParameterCard
 import com.brewmaster.presentation.component.StepPreviewList
 import com.brewmaster.presentation.component.TargetProfileSelector
 import com.brewmaster.presentation.component.TechniqueSelector
+import com.brewmaster.presentation.component.CustomTechniqueEditor
+import com.brewmaster.presentation.screen.brew.BrewSession
+import com.brewmaster.presentation.screen.recipe.SaveRecipeDialog
 import com.brewmaster.presentation.theme.DarkCard
 import com.brewmaster.presentation.theme.IceBlue
 import com.brewmaster.presentation.theme.LimeGreen
@@ -62,6 +67,13 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        BrewSession.selectedRecipe?.let { recipe ->
+            viewModel.loadRecipe(recipe)
+            BrewSession.selectedRecipe = null
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -129,6 +141,26 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
+        AnimatedVisibility(
+            visible = state.selectedTechnique?.id == "custom",
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            CustomTechniqueEditor(
+                tempMin = state.customTempMin,
+                tempMax = state.customTempMax,
+                steps = state.customSteps,
+                onTempMinChanged = viewModel::onCustomTempMinChanged,
+                onTempMaxChanged = viewModel::onCustomTempMaxChanged,
+                onAddStep = viewModel::onAddCustomStep,
+                onUpdateStep = viewModel::onUpdateCustomStep,
+                onRemoveStep = viewModel::onRemoveCustomStep,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            )
+        }
+
         // --- Target Profile ---
         Spacer(Modifier.height(24.dp))
         SectionLabel("TARGET PROFILE")
@@ -194,20 +226,6 @@ fun DashboardScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // --- Coffee Process ---
-        if (state.processes.isNotEmpty()) {
-            SectionLabel("COFFEE PROCESS")
-            Spacer(Modifier.height(8.dp))
-            ProcessPickerCard(
-                selectedProcess = state.selectedProcess,
-                onClick = viewModel::onProcessPickerOpen,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            )
-            Spacer(Modifier.height(16.dp))
-        }
-
         // --- Brew Mode ---
         SectionLabel("BREW MODE")
         Spacer(Modifier.height(8.dp))
@@ -260,6 +278,27 @@ fun DashboardScreen(
 
             Spacer(Modifier.height(24.dp))
 
+            // --- Save Recipe Button ---
+            OutlinedButton(
+                onClick = viewModel::onSaveRecipeOpen,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = LimeGreen
+                )
+            ) {
+                Text(
+                    text = "SAVE RECIPE",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
             // --- Start Brewing Button ---
             Button(
                 onClick = { onStartBrewing(calc) },
@@ -284,17 +323,18 @@ fun DashboardScreen(
         Spacer(Modifier.height(32.dp))
     }
 
-    // --- Process Bottom Sheet ---
-    if (state.showProcessPicker) {
-        ModalBottomSheet(
-            onDismissRequest = viewModel::onProcessPickerDismissed,
-            sheetState = rememberModalBottomSheetState(),
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            ProcessPickerSheet(
-                processes = state.processes,
-                selectedProcess = state.selectedProcess,
-                onSelect = viewModel::onProcessSelected
+    if (state.showSaveRecipeDialog) {
+        state.calculation?.let { calc ->
+            SaveRecipeDialog(
+                currentTechniqueId = calc.technique.id,
+                currentProcessId = state.selectedProcess?.id ?: 0,
+                currentGrindSize = calc.grindSize,
+                currentRatio = state.ratio.replace(',', '.').toDoubleOrNull() ?: calc.totalVolume / calc.coffeeWeight,
+                currentCoffeeWeight = calc.coffeeWeight,
+                currentIsIce = state.brewMode == BrewMode.ICE,
+                currentIceWeight = if (state.brewMode == BrewMode.ICE) calc.iceWeight else null,
+                onSave = viewModel::saveCurrentRecipe,
+                onDismiss = viewModel::onSaveRecipeDismissed
             )
         }
     }
@@ -315,8 +355,6 @@ fun DashboardScreen(
     }
 }
 
-// ─── Private composables ────────────────────────────────────────────────────
-
 @Composable
 private fun SectionLabel(text: String) {
     Text(
@@ -327,146 +365,6 @@ private fun SectionLabel(text: String) {
         modifier = Modifier.padding(horizontal = 16.dp),
         letterSpacing = MaterialTheme.typography.labelMedium.letterSpacing * 1.5f
     )
-}
-
-@Composable
-private fun ProcessPickerCard(
-    selectedProcess: CoffeeProcess?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = DarkCard
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = selectedProcess?.processName ?: "Select Process",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (selectedProcess != null) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-                if (selectedProcess != null) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = selectedProcess.extractionNote,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = LimeGreen.copy(alpha = 0.15f)
-                    ) {
-                        Text(
-                            text = "${selectedProcess.tempMin}–${selectedProcess.tempMax}°C",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = LimeGreen,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
-                    }
-                }
-            }
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = "Select process",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun ProcessPickerSheet(
-    processes: List<CoffeeProcess>,
-    selectedProcess: CoffeeProcess?,
-    onSelect: (CoffeeProcess?) -> Unit
-) {
-    Column(modifier = Modifier.padding(bottom = 32.dp)) {
-        Text(
-            text = "Coffee Process",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-        )
-        Spacer(Modifier.height(8.dp))
-
-        Surface(
-            onClick = { onSelect(null) },
-            shape = RoundedCornerShape(12.dp),
-            color = if (selectedProcess == null) {
-                LimeGreen.copy(alpha = 0.12f)
-            } else {
-                DarkCard
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
-        ) {
-            Text(
-                text = "None (use technique defaults)",
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (selectedProcess == null) LimeGreen else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-
-        processes.forEach { process ->
-            val isSelected = process.id == selectedProcess?.id
-            Surface(
-                onClick = { onSelect(process) },
-                shape = RoundedCornerShape(12.dp),
-                color = if (isSelected) LimeGreen.copy(alpha = 0.12f) else DarkCard,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = process.processName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (isSelected) LimeGreen else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = LimeGreen.copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                text = "${process.tempMin}–${process.tempMax}°C",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = LimeGreen,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = process.extractionNote,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
 }
 
 @Composable
