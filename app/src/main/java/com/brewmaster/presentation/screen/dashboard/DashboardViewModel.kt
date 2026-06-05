@@ -8,10 +8,12 @@ import com.brewmaster.domain.model.BrewTechnique
 import com.brewmaster.domain.model.CoffeeBean
 import com.brewmaster.domain.model.CoffeeProcess
 import com.brewmaster.domain.model.GrindSize
+import com.brewmaster.domain.model.Grinder
 import com.brewmaster.domain.model.PersonalRecipe
 import com.brewmaster.domain.model.TargetProfile
 import com.brewmaster.domain.usecase.CalculateBrewUseCase
 import com.brewmaster.domain.usecase.GetBeansUseCase
+import com.brewmaster.domain.usecase.GetGrindersUseCase
 import com.brewmaster.domain.usecase.GetProcessPresetsUseCase
 import com.brewmaster.domain.usecase.GetTechniquesUseCase
 import com.brewmaster.domain.usecase.SaveRecipeUseCase
@@ -38,6 +40,8 @@ data class DashboardUiState(
     val brewMode: BrewMode = BrewMode.HOT,
     val iceWeight: String = "80",
     val calculation: BrewCalculation? = null,
+    val grinders: List<Grinder> = emptyList(),
+    val selectedGrinder: Grinder? = null,
     val showBeanPicker: Boolean = false,
     val showSaveRecipeDialog: Boolean = false,
     val customTempMin: Int = 90,
@@ -54,7 +58,8 @@ class DashboardViewModel @Inject constructor(
     private val getTechniquesUseCase: GetTechniquesUseCase,
     private val getProcessPresetsUseCase: GetProcessPresetsUseCase,
     private val getBeansUseCase: GetBeansUseCase,
-    private val saveRecipeUseCase: SaveRecipeUseCase
+    private val saveRecipeUseCase: SaveRecipeUseCase,
+    private val getGrindersUseCase: GetGrindersUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -64,12 +69,14 @@ class DashboardViewModel @Inject constructor(
     init {
         val techniques = getTechniquesUseCase()
         val first = techniques.firstOrNull()
+        val grinders = getGrindersUseCase()
         _uiState.update { state ->
             state.copy(
                 techniques = techniques,
                 selectedTechnique = first,
                 ratio = first?.defaultRatio?.toString() ?: state.ratio,
-                grindSize = first?.defaultGrind ?: state.grindSize
+                grindSize = first?.defaultGrind ?: state.grindSize,
+                grinders = grinders
             )
         }
         recalculate()
@@ -113,6 +120,10 @@ class DashboardViewModel @Inject constructor(
     fun onGrindSizeChanged(grindSize: GrindSize) {
         _uiState.update { it.copy(grindSize = grindSize) }
         recalculate()
+    }
+
+    fun onGrinderSelected(grinder: Grinder) {
+        _uiState.update { it.copy(selectedGrinder = grinder) }
     }
 
     fun onBrewModeToggled(mode: BrewMode) {

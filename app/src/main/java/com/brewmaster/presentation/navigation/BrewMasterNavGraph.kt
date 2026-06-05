@@ -8,7 +8,9 @@ import com.brewmaster.presentation.screen.brew.BrewSession
 import com.brewmaster.presentation.screen.cheatsheet.CheatSheetScreen
 import com.brewmaster.presentation.screen.dashboard.DashboardScreen
 import com.brewmaster.presentation.screen.brew.BrewTimerScreen
+import com.brewmaster.presentation.screen.journal.BrewJournalScreen
 import com.brewmaster.presentation.screen.recipe.RecipeListScreen
+import com.brewmaster.presentation.screen.troubleshoot.TroubleshootScreen
 
 @Composable
 fun BrewMasterNavGraph(navController: NavHostController) {
@@ -24,6 +26,12 @@ fun BrewMasterNavGraph(navController: NavHostController) {
                 },
                 onNavigateToCheatSheet = {
                     navController.navigate("cheatsheet")
+                },
+                onNavigateToJournal = {
+                    navController.navigate("journal")
+                },
+                onNavigateToTroubleshoot = {
+                    navController.navigate("troubleshoot")
                 }
             )
         }
@@ -43,6 +51,16 @@ fun BrewMasterNavGraph(navController: NavHostController) {
         }
         composable("cheatsheet") {
             CheatSheetScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable("journal") {
+            BrewJournalScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable("troubleshoot") {
+            TroubleshootScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

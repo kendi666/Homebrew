@@ -46,6 +46,7 @@ import com.brewmaster.presentation.component.BrewModeToggle
 import com.brewmaster.presentation.component.CoffeeBeanPickerCard
 import com.brewmaster.presentation.component.CoffeeBeanPickerSheet
 import com.brewmaster.presentation.component.GrindSizeSelector
+import com.brewmaster.presentation.component.GrinderSelector
 import com.brewmaster.presentation.component.ParameterCard
 import com.brewmaster.presentation.component.StepPreviewList
 import com.brewmaster.presentation.component.TargetProfileSelector
@@ -64,6 +65,8 @@ fun DashboardScreen(
     onStartBrewing: (BrewCalculation) -> Unit,
     onNavigateToRecipes: () -> Unit,
     onNavigateToCheatSheet: () -> Unit = {},
+    onNavigateToJournal: () -> Unit = {},
+    onNavigateToTroubleshoot: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -128,8 +131,19 @@ fun DashboardScreen(
             text = "Craft your perfect cup",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 20.dp)
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 12.dp)
         )
+
+        // --- Quick actions ---
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            QuickActionChip(text = "Brew Journal", onClick = onNavigateToJournal)
+            QuickActionChip(text = "Troubleshoot", onClick = onNavigateToTroubleshoot)
+        }
 
         // --- Technique Selector ---
         SectionLabel("TECHNIQUE")
@@ -221,6 +235,15 @@ fun DashboardScreen(
         GrindSizeSelector(
             selected = state.grindSize,
             onSelect = viewModel::onGrindSizeChanged,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(12.dp))
+        GrinderSelector(
+            grinders = state.grinders,
+            selectedGrinder = state.selectedGrinder,
+            grindSize = state.grindSize,
+            onSelect = viewModel::onGrinderSelected,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -352,6 +375,23 @@ fun DashboardScreen(
                 onSelect = viewModel::onBeanSelected
             )
         }
+    }
+}
+
+@Composable
+private fun QuickActionChip(text: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = DarkSurfaceVariant
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        )
     }
 }
 

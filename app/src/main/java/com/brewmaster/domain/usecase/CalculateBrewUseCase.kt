@@ -1,6 +1,7 @@
 package com.brewmaster.domain.usecase
 
 import com.brewmaster.domain.engine.HoffmannEngine
+import com.brewmaster.domain.engine.HybridImmersionEngine
 import com.brewmaster.domain.engine.KasuyaEngine
 import com.brewmaster.domain.engine.OsmoticEngine
 import com.brewmaster.domain.engine.RaoEngine
@@ -11,6 +12,7 @@ import com.brewmaster.domain.model.BrewTechnique
 import com.brewmaster.domain.model.CoffeeBean
 import com.brewmaster.domain.model.CoffeeProcess
 import com.brewmaster.domain.model.GrindSize
+import com.brewmaster.domain.model.RoastLevel
 import com.brewmaster.domain.model.TargetProfile
 import javax.inject.Inject
 import kotlin.math.max
@@ -47,6 +49,7 @@ class CalculateBrewUseCase @Inject constructor() {
             "kasuya_46" -> KasuyaEngine()
             "rao" -> RaoEngine()
             "osmotic" -> OsmoticEngine()
+            "hybrid_immersion" -> HybridImmersionEngine()
             "single_cup" -> SingleCupEngine()
             "custom" -> customSteps?.let { com.brewmaster.domain.engine.CustomEngine(it) } ?: SingleCupEngine()
             else -> SingleCupEngine()
@@ -84,6 +87,14 @@ class CalculateBrewUseCase @Inject constructor() {
         tempMin = (tempMin + targetProfile.tempOffset).coerceIn(80, 100)
         tempMax = (tempMax + targetProfile.tempOffset).coerceIn(80, 100)
         if (tempMin > tempMax) tempMin = tempMax
+
+        // Apply roast-level offset: lighter roasts brew hotter, darker roasts cooler.
+        bean?.let {
+            val roastOffset = RoastLevel.fromLabel(it.roastLevel).tempOffset
+            tempMin = (tempMin + roastOffset).coerceIn(80, 100)
+            tempMax = (tempMax + roastOffset).coerceIn(80, 100)
+            if (tempMin > tempMax) tempMin = tempMax
+        }
 
         val totalBrewTimeSec = if (technique.id == "custom" && customSteps != null) {
             customSteps.sumOf { it.durationSec }

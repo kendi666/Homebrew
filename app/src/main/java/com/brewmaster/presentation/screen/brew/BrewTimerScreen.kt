@@ -375,6 +375,8 @@ private fun actionIcon(action: StepAction): String = when (action) {
     StepAction.EXCAVATE -> "⛏️"
     StepAction.PULSE -> "📊"
     StepAction.OSMOTIC -> "💦"
+    StepAction.IMMERSE -> "🛁"
+    StepAction.RELEASE -> "🔓"
 }
 
 private fun startTimerService(context: Context, initialStepName: String) {
@@ -409,7 +411,8 @@ private fun com.brewmaster.domain.model.BrewStep.isWaterStep(): Boolean {
         StepAction.BLOOM,
         StepAction.POUR,
         StepAction.PULSE,
-        StepAction.OSMOTIC
+        StepAction.OSMOTIC,
+        StepAction.IMMERSE
     )
 }
 

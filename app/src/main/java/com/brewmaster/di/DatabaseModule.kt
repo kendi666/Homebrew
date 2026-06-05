@@ -3,6 +3,7 @@ package com.brewmaster.di
 import android.content.Context
 import androidx.room.Room
 import com.brewmaster.data.local.BrewMasterDatabase
+import com.brewmaster.data.local.dao.BrewLogDao
 import com.brewmaster.data.local.dao.CoffeeBeanDao
 import com.brewmaster.data.local.dao.CoffeeProcessDao
 import com.brewmaster.data.local.dao.PersonalRecipeDao
@@ -29,6 +30,7 @@ object DatabaseModule {
             BrewMasterDatabase::class.java,
             "brewmaster.db"
         )
+            .addMigrations(BrewMasterDatabase.MIGRATION_4_5, BrewMasterDatabase.MIGRATION_5_6)
             .fallbackToDestructiveMigration()
             .addCallback(BrewMasterDatabase.prepopulateCallback(scope) { instance!! })
             .build()
@@ -48,5 +50,10 @@ object DatabaseModule {
     @Provides
     fun provideCoffeeBeanDao(database: BrewMasterDatabase): CoffeeBeanDao {
         return database.coffeeBeanDao()
+    }
+
+    @Provides
+    fun provideBrewLogDao(database: BrewMasterDatabase): BrewLogDao {
+        return database.brewLogDao()
     }
 }

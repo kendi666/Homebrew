@@ -144,6 +144,8 @@ private fun stepActionIcon(action: StepAction) = when (action) {
     StepAction.EXCAVATE -> Icons.Default.ArrowDropDown
     StepAction.PULSE -> Icons.Default.ArrowDropDown
     StepAction.OSMOTIC -> Icons.Default.ArrowDropDown
+    StepAction.IMMERSE -> Icons.Default.ArrowDropDown
+    StepAction.RELEASE -> Icons.Default.Refresh
 }
 
 private fun formatWeight(weight: Double): String =

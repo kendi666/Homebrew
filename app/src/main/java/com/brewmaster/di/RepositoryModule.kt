@@ -1,8 +1,10 @@
 package com.brewmaster.di
 
+import com.brewmaster.data.repository.BrewLogRepositoryImpl
 import com.brewmaster.data.repository.CoffeeBeanRepositoryImpl
 import com.brewmaster.data.repository.CoffeeProcessRepositoryImpl
 import com.brewmaster.data.repository.RecipeRepositoryImpl
+import com.brewmaster.domain.repository.BrewLogRepository
 import com.brewmaster.domain.repository.CoffeeBeanRepository
 import com.brewmaster.domain.repository.CoffeeProcessRepository
 import com.brewmaster.domain.repository.RecipeRepository
@@ -29,4 +31,9 @@ abstract class RepositoryModule {
     abstract fun bindCoffeeBeanRepository(
         impl: CoffeeBeanRepositoryImpl
     ): CoffeeBeanRepository
+
+    @Binds
+    abstract fun bindBrewLogRepository(
+        impl: BrewLogRepositoryImpl
+    ): BrewLogRepository
 }

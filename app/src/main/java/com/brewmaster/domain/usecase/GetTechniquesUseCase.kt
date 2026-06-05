@@ -59,6 +59,18 @@ class GetTechniquesUseCase @Inject constructor() {
                 totalBrewTimeSec = 210
             ),
             BrewTechnique(
+                id = "hybrid_immersion",
+                name = "Hybrid Immersion",
+                author = "Switch / Clever",
+                focus = "Body & Clarity",
+                description = "Immersion steep with the valve closed, then open to percolate the rest for a clean finish",
+                defaultRatio = 16.67,
+                defaultGrind = GrindSize.MEDIUM,
+                defaultTempMin = 90,
+                defaultTempMax = 94,
+                totalBrewTimeSec = 225
+            ),
+            BrewTechnique(
                 id = "single_cup",
                 name = "Single Cup",
                 author = "Classic",
