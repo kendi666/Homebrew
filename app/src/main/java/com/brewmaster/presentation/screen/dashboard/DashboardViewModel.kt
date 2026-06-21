@@ -76,7 +76,8 @@ class DashboardViewModel @Inject constructor(
                 selectedTechnique = first,
                 ratio = first?.defaultRatio?.toString() ?: state.ratio,
                 grindSize = first?.defaultGrind ?: state.grindSize,
-                grinders = grinders
+                grinders = grinders,
+                selectedGrinder = grinders.firstOrNull { it.id == "1zpresso_k_ultra" } ?: grinders.firstOrNull()
             )
         }
         recalculate()

@@ -29,6 +29,7 @@ fun GrinderSelector(
     grinders: List<Grinder>,
     selectedGrinder: Grinder?,
     grindSize: GrindSize,
+    techniqueId: String?,
     onSelect: (Grinder) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -58,12 +59,28 @@ fun GrinderSelector(
 
         if (selectedGrinder != null) {
             Text(
-                text = "${selectedGrinder.name}: ${selectedGrinder.settingLabel(grindSize.microns)} " +
+                text = "${selectedGrinder.name}: ${selectedGrinder.settingLabel(grindSize, techniqueId)} " +
                     "(${grindSize.label}) — approx, dial to taste",
                 style = MaterialTheme.typography.bodySmall,
                 color = LimeGreen,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)
             )
+            selectedGrinder.techniqueSettingLabel(techniqueId)?.let { methodSetting ->
+                Text(
+                    text = "Method start: $methodSetting",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = LimeGreen.copy(alpha = 0.85f),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp)
+                )
+            }
+            selectedGrinder.sourceNote?.let { note ->
+                Text(
+                    text = note,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp)
+                )
+            }
         }
     }
 }

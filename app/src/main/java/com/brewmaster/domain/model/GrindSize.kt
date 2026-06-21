@@ -6,7 +6,8 @@ enum class GrindSize(val label: String, val microns: Int) {
     MEDIUM_FINE("Medium-Fine", 600),
     MEDIUM("Medium", 800),
     MEDIUM_COARSE("Medium-Coarse", 1000),
-    COARSE("Coarse", 1200);
+    COARSE("Coarse", 1200),
+    EXTRA_COARSE("Extra-Coarse", 1400);
 
     override fun toString(): String = label
 }

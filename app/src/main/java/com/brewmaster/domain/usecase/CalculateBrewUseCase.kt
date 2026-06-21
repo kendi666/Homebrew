@@ -3,6 +3,8 @@ package com.brewmaster.domain.usecase
 import com.brewmaster.domain.engine.HoffmannEngine
 import com.brewmaster.domain.engine.HybridImmersionEngine
 import com.brewmaster.domain.engine.KasuyaEngine
+import com.brewmaster.domain.engine.MattWintonFivePourEngine
+import com.brewmaster.domain.engine.NeoKasuyaTenPourEngine
 import com.brewmaster.domain.engine.OsmoticEngine
 import com.brewmaster.domain.engine.RaoEngine
 import com.brewmaster.domain.engine.SingleCupEngine
@@ -47,8 +49,11 @@ class CalculateBrewUseCase @Inject constructor() {
         val engine = when (technique.id) {
             "hoffmann" -> HoffmannEngine()
             "kasuya_46" -> KasuyaEngine()
+            "neo_kasuya_10" -> NeoKasuyaTenPourEngine()
+            "matt_winton_5_pour" -> MattWintonFivePourEngine()
             "rao" -> RaoEngine()
             "osmotic" -> OsmoticEngine()
+            "hario_switch_hybrid" -> HybridImmersionEngine()
             "hybrid_immersion" -> HybridImmersionEngine()
             "single_cup" -> SingleCupEngine()
             "custom" -> customSteps?.let { com.brewmaster.domain.engine.CustomEngine(it) } ?: SingleCupEngine()

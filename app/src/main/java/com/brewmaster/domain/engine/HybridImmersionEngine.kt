@@ -38,8 +38,8 @@ class HybridImmersionEngine : BrewEngine {
                 cumulativeWater = bloomAmount,
                 startTimeSec = 0,
                 endTimeSec = 45,
-                instruction = "Switch CLOSED. Pour ${bloomAmount.roundToInt()}g, swirl to saturate all grounds",
-                tip = "Keep the valve closed for the whole immersion phase"
+                instruction = "Switch CLOSED. Pour ${bloomAmount.roundToInt()}g with 90-95°C water, swirl to saturate",
+                tip = "Keep the valve closed for the immersion phase"
             ),
             BrewStep(
                 order = 2,
@@ -50,7 +50,7 @@ class HybridImmersionEngine : BrewEngine {
                 cumulativeWater = immersionCumulative,
                 startTimeSec = 45,
                 endTimeSec = 90,
-                instruction = "Still CLOSED. Pour up to ${immersionCumulative.roundToInt()}g and let it submerge"
+                instruction = "Still CLOSED. Pour with 90-95°C water up to ${immersionCumulative.roundToInt()}g and submerge"
             ),
             BrewStep(
                 order = 3,
@@ -84,7 +84,7 @@ class HybridImmersionEngine : BrewEngine {
                 cumulativeWater = total,
                 startTimeSec = 170,
                 endTimeSec = 210,
-                instruction = "Switch OPEN. Pour to ${total.roundToInt()}g in slow circles for clarity"
+                instruction = "Switch OPEN. Pour to ${total.roundToInt()}g in slow circles; use 70-80°C here for more sweetness"
             ),
             BrewStep(
                 order = 6,

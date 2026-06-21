@@ -18,8 +18,8 @@ class GetTechniquesUseCase @Inject constructor() {
                 description = "Bloom, main pour, final pour with stir and swirl to flatten bed",
                 defaultRatio = 16.67,
                 defaultGrind = GrindSize.MEDIUM_FINE,
-                defaultTempMin = 92,
-                defaultTempMax = 96,
+                defaultTempMin = 95,
+                defaultTempMax = 100,
                 totalBrewTimeSec = 210
             ),
             BrewTechnique(
@@ -30,8 +30,32 @@ class GetTechniquesUseCase @Inject constructor() {
                 description = "Five equal pours: first 40% controls taste, remaining 60% controls strength",
                 defaultRatio = 15.0,
                 defaultGrind = GrindSize.COARSE,
-                defaultTempMin = 92,
+                defaultTempMin = 90,
+                defaultTempMax = 92,
+                totalBrewTimeSec = 210
+            ),
+            BrewTechnique(
+                id = "neo_kasuya_10",
+                name = "Neo Kasuya 10",
+                author = "Tetsu Kasuya",
+                focus = "High Sweetness & Syrupy Body",
+                description = "Ten rapid 30g-style pulses with very coarse grind and high temperature for syrupy sweetness",
+                defaultRatio = 15.0,
+                defaultGrind = GrindSize.EXTRA_COARSE,
+                defaultTempMin = 95,
                 defaultTempMax = 96,
+                totalBrewTimeSec = 210
+            ),
+            BrewTechnique(
+                id = "matt_winton_5_pour",
+                name = "Winton 5 Pour",
+                author = "Matt Winton",
+                focus = "Clarity & Juicy Body",
+                description = "Five coarse pulse pours; championship versions use hotter early pours and cooler late pours",
+                defaultRatio = 15.0,
+                defaultGrind = GrindSize.MEDIUM_COARSE,
+                defaultTempMin = 88,
+                defaultTempMax = 93,
                 totalBrewTimeSec = 210
             ),
             BrewTechnique(
@@ -42,8 +66,8 @@ class GetTechniquesUseCase @Inject constructor() {
                 description = "Bloom with excavation, single main pour, spin to flatten bed",
                 defaultRatio = 16.67,
                 defaultGrind = GrindSize.MEDIUM_FINE,
-                defaultTempMin = 92,
-                defaultTempMax = 96,
+                defaultTempMin = 96,
+                defaultTempMax = 97,
                 totalBrewTimeSec = 180
             ),
             BrewTechnique(
@@ -59,15 +83,15 @@ class GetTechniquesUseCase @Inject constructor() {
                 totalBrewTimeSec = 210
             ),
             BrewTechnique(
-                id = "hybrid_immersion",
-                name = "Hybrid Immersion",
-                author = "Switch / Clever",
+                id = "hario_switch_hybrid",
+                name = "Hario Switch Hybrid",
+                author = "Hario Switch",
                 focus = "Body & Clarity",
-                description = "Immersion steep with the valve closed, then open to percolate the rest for a clean finish",
+                description = "Hybrid Switch recipe: hot percolation phase, optional cooler immersion finish for sweetness",
                 defaultRatio = 16.67,
                 defaultGrind = GrindSize.MEDIUM,
                 defaultTempMin = 90,
-                defaultTempMax = 94,
+                defaultTempMax = 95,
                 totalBrewTimeSec = 225
             ),
             BrewTechnique(
@@ -78,8 +102,8 @@ class GetTechniquesUseCase @Inject constructor() {
                 description = "Basic bloom followed by slow continuous circular pour",
                 defaultRatio = 16.67,
                 defaultGrind = GrindSize.MEDIUM_FINE,
-                defaultTempMin = 92,
-                defaultTempMax = 96,
+                defaultTempMin = 95,
+                defaultTempMax = 100,
                 totalBrewTimeSec = 180
             ),
             BrewTechnique(

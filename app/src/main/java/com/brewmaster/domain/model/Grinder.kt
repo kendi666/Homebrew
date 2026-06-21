@@ -16,7 +16,10 @@ data class Grinder(
     val unitLabel: String,         // "clicks" or "steps"
     val micronsPerUnit: Double,    // size change per click/step
     val zeroOffsetMicrons: Double, // nominal microns at unit 0
-    val maxUnits: Int              // for clamping the displayed value
+    val maxUnits: Int,             // for clamping the displayed value
+    val grindSizeSettings: Map<GrindSize, String> = emptyMap(),
+    val techniqueSettings: Map<String, String> = emptyMap(),
+    val sourceNote: String? = null
 ) {
     /** Approximate setting (clicks/steps from zero) for a target micron size. */
     fun unitsForMicrons(microns: Int): Int {
@@ -25,6 +28,13 @@ data class Grinder(
     }
 
     /** Friendly hint such as "≈ 22 clicks". */
-    fun settingLabel(microns: Int): String =
-        "≈ ${unitsForMicrons(microns)} $unitLabel"
+    fun settingLabel(grindSize: GrindSize, techniqueId: String? = null): String {
+        val techniqueSetting = techniqueId?.let { techniqueSettings[it] }
+        val sizeSetting = grindSizeSettings[grindSize]
+        return sizeSetting ?: techniqueSetting ?: "≈ ${unitsForMicrons(grindSize.microns)} $unitLabel"
+    }
+
+    fun techniqueSettingLabel(techniqueId: String?): String? {
+        return techniqueId?.let { techniqueSettings[it] }
+    }
 }

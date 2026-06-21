@@ -243,6 +243,7 @@ fun DashboardScreen(
             grinders = state.grinders,
             selectedGrinder = state.selectedGrinder,
             grindSize = state.grindSize,
+            techniqueId = state.selectedTechnique?.id,
             onSelect = viewModel::onGrinderSelected,
             modifier = Modifier.fillMaxWidth()
         )
