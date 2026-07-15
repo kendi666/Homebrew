@@ -11,5 +11,9 @@ data class PersonalRecipe(
     val isIce: Boolean,
     val iceWeight: Double? = null,
     val notes: String? = null,
-    val createdAt: Long
+    val createdAt: Long,
+    /** Dial label as used on the grinder, e.g. "8.2" or "22". */
+    val grinderSetting: String? = null,
+    val tempMin: Int? = null,
+    val tempMax: Int? = null
 )

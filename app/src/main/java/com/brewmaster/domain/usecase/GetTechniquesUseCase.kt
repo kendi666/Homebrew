@@ -107,6 +107,18 @@ class GetTechniquesUseCase @Inject constructor() {
                 totalBrewTimeSec = 180
             ),
             BrewTechnique(
+                id = "bypass",
+                name = "Bypass",
+                author = "Barista trick",
+                focus = "Strong but Smooth",
+                description = "Brew concentrate (~1:11), then dilute with hot water in the server — softens sharp acidity",
+                defaultRatio = 14.0,
+                defaultGrind = GrindSize.MEDIUM,
+                defaultTempMin = 93,
+                defaultTempMax = 95,
+                totalBrewTimeSec = 180
+            ),
+            BrewTechnique(
                 id = "custom",
                 name = "Custom",
                 author = "You",

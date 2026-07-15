@@ -28,6 +28,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledIconButton
@@ -52,6 +54,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.brewmaster.domain.model.StepAction
 import com.brewmaster.presentation.component.CircularProgressTimer
 import com.brewmaster.presentation.component.DynamicPhaseIndicator
+import com.brewmaster.presentation.component.PostBrewCoachOverlay
 import com.brewmaster.presentation.component.StopAlertOverlay
 import com.brewmaster.service.BrewTimerService
 import com.brewmaster.presentation.theme.DarkBackground
@@ -177,11 +180,14 @@ fun BrewTimerScreen(
 
                 BottomControls(
                     isRunning = uiState.isRunning,
-                    isPaused = uiState.isPaused,
                     isFinished = uiState.isFinished,
+                    canGoBack = uiState.currentStepIndex > 0 || uiState.elapsedSeconds > 0,
+                    canSkip = !uiState.isFinished,
                     onPause = viewModel::pauseTimer,
                     onResume = viewModel::resumeTimer,
-                    onReset = viewModel::resetTimer
+                    onReset = viewModel::resetTimer,
+                    onPrevious = viewModel::goToPreviousStep,
+                    onSkip = viewModel::skipToNextStep
                 )
             }
         }
@@ -196,6 +202,21 @@ fun BrewTimerScreen(
                 onDismiss = {
                     stopTimerService(context)
                     viewModel.dismissStopAlert()
+                }
+            )
+        }
+
+        AnimatedVisibility(
+            visible = uiState.showCoach,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            PostBrewCoachOverlay(
+                elapsedSec = uiState.elapsedSeconds,
+                targetSec = calculation?.totalBrewTimeSec ?: 0,
+                adviceFor = viewModel::coachAdvice,
+                onDone = {
+                    viewModel.dismissCoach()
                     onNavigateBack()
                 }
             )
@@ -312,57 +333,112 @@ private fun InstructionCard(step: com.brewmaster.domain.model.BrewStep) {
 @Composable
 private fun BottomControls(
     isRunning: Boolean,
-    isPaused: Boolean,
     isFinished: Boolean,
+    canGoBack: Boolean,
+    canSkip: Boolean,
     onPause: () -> Unit,
     onResume: () -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onPrevious: () -> Unit,
+    onSkip: () -> Unit
 ) {
-    Row(
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        FilledIconButton(
-            onClick = onReset,
-            modifier = Modifier.size(48.dp),
-            shape = CircleShape,
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = DarkCard,
-                contentColor = TextSecondary
-            )
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = "Reset",
-                modifier = Modifier.size(22.dp)
-            )
+            FilledIconButton(
+                onClick = onPrevious,
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                enabled = canGoBack,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = DarkCard,
+                    contentColor = TextSecondary,
+                    disabledContainerColor = DarkCard.copy(alpha = 0.4f),
+                    disabledContentColor = TextMuted
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SkipPrevious,
+                    contentDescription = "Previous step",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            FilledIconButton(
+                onClick = onReset,
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = DarkCard,
+                    contentColor = TextSecondary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Reset",
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(20.dp))
+
+            FilledIconButton(
+                onClick = {
+                    if (isRunning) onPause() else onResume()
+                },
+                modifier = Modifier.size(72.dp),
+                shape = CircleShape,
+                enabled = !isFinished,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = LimeGreen,
+                    contentColor = DarkBackground,
+                    disabledContainerColor = DarkCard,
+                    disabledContentColor = TextMuted
+                )
+            ) {
+                Icon(
+                    imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isRunning) "Pause" else "Resume",
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(20.dp))
+
+            FilledIconButton(
+                onClick = onSkip,
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                enabled = canSkip,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = DarkCard,
+                    contentColor = LimeGreen,
+                    disabledContainerColor = DarkCard.copy(alpha = 0.4f),
+                    disabledContentColor = TextMuted
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SkipNext,
+                    contentDescription = "Skip to next step",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.width(32.dp))
-
-        FilledIconButton(
-            onClick = {
-                if (isRunning) onPause() else onResume()
-            },
-            modifier = Modifier.size(72.dp),
-            shape = CircleShape,
-            enabled = !isFinished,
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = LimeGreen,
-                contentColor = DarkBackground
-            )
-        ) {
-            Icon(
-                imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = if (isRunning) "Pause" else "Resume",
-                modifier = Modifier.size(36.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(32.dp))
-
-        Spacer(modifier = Modifier.size(48.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Prev restarts / goes back · Next skips step",
+            style = MaterialTheme.typography.labelSmall,
+            color = TextMuted
+        )
     }
 }
 

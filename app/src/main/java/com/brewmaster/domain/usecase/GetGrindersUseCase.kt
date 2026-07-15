@@ -18,18 +18,27 @@ class GetGrindersUseCase @Inject constructor() {
             Grinder(
                 id = "comandante_c40_mk4",
                 name = "Comandante C40 MK4",
-                unitLabel = "clicks",       // internal dial; ~30 µm/click stock axle
-                micronsPerUnit = 30.0,       // Red Clix axle ≈ 15 µm/click for espresso
+                unitLabel = "clicks",
+                micronsPerUnit = 30.0,
                 zeroOffsetMicrons = 0.0,
-                maxUnits = 50
+                maxUnits = 50,
+                filterDialMin = 12.0,
+                filterDialMax = 30.0,
+                dialStep = 1.0,
+                dialClickFactor = 1.0,
+                sourceNote = "Filter pour-over typically ~12–30 clicks; finer is espresso/moka."
             ),
             Grinder(
                 id = "1zpresso_k_ultra",
                 name = "1Zpresso K-Ultra",
                 unitLabel = "clicks",
-                micronsPerUnit = 20.0,   // 100 clicks / rotation, 20 µm per click
+                micronsPerUnit = 20.0,
                 zeroOffsetMicrons = 0.0,
                 maxUnits = 110,
+                filterDialMin = 6.5,
+                filterDialMax = 10.0,
+                dialStep = 0.1,
+                dialClickFactor = 10.0,
                 grindSizeSettings = mapOf(
                     GrindSize.EXTRA_FINE to "3.0-4.0 (espresso range)",
                     GrindSize.FINE to "5.0-6.0 (moka / fine AeroPress)",
@@ -46,17 +55,22 @@ class GetGrindersUseCase @Inject constructor() {
                     "matt_winton_5_pour" to "8.6-9.2 (86-92 clicks), coarse 5 pours",
                     "hario_switch_hybrid" to "7.8-8.5 (78-85 clicks), Switch hybrid",
                     "hybrid_immersion" to "7.8-8.5 (78-85 clicks), Switch hybrid",
-                    "single_cup" to "7.5-8.5 (75-85 clicks), standard V60"
+                    "single_cup" to "7.5-8.5 (75-85 clicks), standard V60",
+                    "bypass" to "8.0-8.6 (80-86 clicks), medium concentrate"
                 ),
-                sourceNote = "K-Ultra: 100 clicks/rotation, 20µm/click. V60 sources converge around 8.0-9.2; Kasuya-style pulse recipes are coarser."
+                sourceNote = "Filter dial 6.5–10.0 only. Below 6.5 is espresso/moka — not shown here."
             ),
             Grinder(
                 id = "1zpresso_k_pro_max_plus",
                 name = "1Zpresso K-Pro / K-Max / K-Plus",
                 unitLabel = "clicks",
-                micronsPerUnit = 22.0,   // 90 clicks / rotation, 22 µm per click
+                micronsPerUnit = 22.0,
                 zeroOffsetMicrons = 0.0,
                 maxUnits = 100,
+                filterDialMin = 6.5,
+                filterDialMax = 10.0,
+                dialStep = 0.1,
+                dialClickFactor = 10.0,
                 grindSizeSettings = mapOf(
                     GrindSize.EXTRA_FINE to "3.0-4.0 (espresso range)",
                     GrindSize.FINE to "5.0-6.0 (moka / fine AeroPress)",
@@ -73,33 +87,47 @@ class GetGrindersUseCase @Inject constructor() {
                     "matt_winton_5_pour" to "8.5-9.0 (85-90 clicks), coarse 5 pours",
                     "hario_switch_hybrid" to "7.8-8.5 (78-85 clicks), Switch hybrid",
                     "hybrid_immersion" to "7.8-8.5 (78-85 clicks), Switch hybrid",
-                    "single_cup" to "7.5-8.5 (75-85 clicks), standard V60"
+                    "single_cup" to "7.5-8.5 (75-85 clicks), standard V60",
+                    "bypass" to "8.0-8.5 (80-85 clicks), medium concentrate"
                 ),
-                sourceNote = "K-Pro/K-Max/K-Plus: 90 clicks/rotation, 22µm/click. The attached chart uses 10 clicks between whole dial numbers."
+                sourceNote = "Filter dial 6.5–10.0 only. Below 6.5 is espresso/moka — not shown here."
             ),
             Grinder(
                 id = "1zpresso_x_ultra",
                 name = "1Zpresso X-Ultra",
                 unitLabel = "clicks",
-                micronsPerUnit = 12.5,   // external dial, true filter + espresso
+                micronsPerUnit = 12.5,
                 zeroOffsetMicrons = 0.0,
-                maxUnits = 120
+                maxUnits = 120,
+                filterDialMin = 40.0,
+                filterDialMax = 90.0,
+                dialStep = 1.0,
+                dialClickFactor = 1.0
             ),
             Grinder(
                 id = "1zpresso_zp6",
                 name = "1Zpresso ZP6",
-                unitLabel = "clicks",    // external ring (Red Dot); FILTER-ONLY clarity, ~240–1050 µm
-                micronsPerUnit = 22.0,   // 0.022 mm/click, 90 clicks/rotation
+                unitLabel = "clicks",
+                micronsPerUnit = 22.0,
                 zeroOffsetMicrons = 0.0,
-                maxUnits = 90
+                maxUnits = 90,
+                filterDialMin = 30.0,
+                filterDialMax = 70.0,
+                dialStep = 1.0,
+                dialClickFactor = 1.0,
+                sourceNote = "ZP6 is filter-focused; dial shows typical V60 window."
             ),
             Grinder(
                 id = "mhw3bomber_blade_r3",
                 name = "MHW-3 Bomber Blade R3",
-                unitLabel = "clicks",    // external dial, 180 settings, upgradeable 48mm burr
-                micronsPerUnit = 16.0,   // 0.016 mm per grid
+                unitLabel = "clicks",
+                micronsPerUnit = 16.0,
                 zeroOffsetMicrons = 0.0,
-                maxUnits = 120
+                maxUnits = 120,
+                filterDialMin = 40.0,
+                filterDialMax = 80.0,
+                dialStep = 1.0,
+                dialClickFactor = 1.0
             ),
             Grinder(
                 id = "timemore_c3",
@@ -107,7 +135,11 @@ class GetGrindersUseCase @Inject constructor() {
                 unitLabel = "clicks",
                 micronsPerUnit = 33.0,
                 zeroOffsetMicrons = 0.0,
-                maxUnits = 36
+                maxUnits = 36,
+                filterDialMin = 12.0,
+                filterDialMax = 24.0,
+                dialStep = 1.0,
+                dialClickFactor = 1.0
             ),
             Grinder(
                 id = "baratza_encore",
@@ -115,7 +147,11 @@ class GetGrindersUseCase @Inject constructor() {
                 unitLabel = "steps",
                 micronsPerUnit = 38.0,
                 zeroOffsetMicrons = 0.0,
-                maxUnits = 40
+                maxUnits = 40,
+                filterDialMin = 15.0,
+                filterDialMax = 30.0,
+                dialStep = 1.0,
+                dialClickFactor = 1.0
             ),
             Grinder(
                 id = "kingrinder_k6",
@@ -123,7 +159,11 @@ class GetGrindersUseCase @Inject constructor() {
                 unitLabel = "clicks",
                 micronsPerUnit = 16.0,
                 zeroOffsetMicrons = 0.0,
-                maxUnits = 90
+                maxUnits = 90,
+                filterDialMin = 40.0,
+                filterDialMax = 80.0,
+                dialStep = 1.0,
+                dialClickFactor = 1.0
             )
         )
     }

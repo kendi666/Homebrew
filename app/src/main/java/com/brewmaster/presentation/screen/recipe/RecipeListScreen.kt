@@ -333,6 +333,20 @@ private fun RecipeCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                recipe.grinderSetting?.let { dial ->
+                    Text(
+                        text = "dial $dial",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (recipe.tempMin != null && recipe.tempMax != null) {
+                    Text(
+                        text = "${recipe.tempMin}–${recipe.tempMax}°C",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
                 if (recipe.isIce) {
                     Text(
                         text = "Iced",
@@ -388,7 +402,7 @@ private fun shareRecipe(context: Context, recipe: PersonalRecipe, techniqueLabel
     val message = buildString {
         appendLine("☕ ${recipe.beanName} — BrewMaster recipe")
         appendLine("Technique: $techniqueLabel")
-        appendLine("Dose ${recipe.coffeeWeight}g · 1:$ratio · ${recipe.grindSize.label}${if (recipe.isIce) " · Iced" else ""}")
+        appendLine("Dose ${recipe.coffeeWeight}g · 1:$ratio · ${recipe.grindSize.label}${recipe.grinderSetting?.let { " · dial $it" }.orEmpty()}${if (recipe.tempMin != null && recipe.tempMax != null) " · ${recipe.tempMin}–${recipe.tempMax}°C" else ""}${if (recipe.isIce) " · Iced" else ""}")
         if (!recipe.notes.isNullOrBlank()) appendLine("Notes: ${recipe.notes}")
         appendLine()
         appendLine("Open in BrewMaster:")

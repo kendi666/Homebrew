@@ -16,5 +16,8 @@ data class PersonalRecipeEntity(
     @ColumnInfo(name = "is_ice") val isIce: Boolean,
     @ColumnInfo(name = "ice_weight") val iceWeight: Double?,
     @ColumnInfo(name = "notes") val notes: String?,
-    @ColumnInfo(name = "created_at") val createdAt: Long
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    @ColumnInfo(name = "grinder_setting") val grinderSetting: String? = null,
+    @ColumnInfo(name = "temp_min") val tempMin: Int? = null,
+    @ColumnInfo(name = "temp_max") val tempMax: Int? = null
 )

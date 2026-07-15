@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.brewmaster.domain.model.BrewCalculation
 import com.brewmaster.domain.model.BrewStep
+import com.brewmaster.domain.model.BrewSymptom
+import com.brewmaster.domain.usecase.BrewCoachAdvice
+import com.brewmaster.domain.usecase.BrewCoachUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -24,7 +27,8 @@ data class BrewTimerUiState(
     val isRunning: Boolean = false,
     val isPaused: Boolean = false,
     val isFinished: Boolean = false,
-    val showStopAlert: Boolean = false
+    val showStopAlert: Boolean = false,
+    val showCoach: Boolean = false
 ) {
     val currentStep: BrewStep?
         get() = calculation?.steps?.getOrNull(currentStepIndex)
@@ -52,7 +56,9 @@ data class StepTransitionEvent(
 )
 
 @HiltViewModel
-class BrewTimerViewModel @Inject constructor() : ViewModel() {
+class BrewTimerViewModel @Inject constructor(
+    private val brewCoachUseCase: BrewCoachUseCase
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BrewTimerUiState())
     val uiState: StateFlow<BrewTimerUiState> = _uiState.asStateFlow()
@@ -95,8 +101,95 @@ class BrewTimerViewModel @Inject constructor() : ViewModel() {
         }
     }
 
+    /** Jump to the start of the next step (or finish if already on the last). */
+    fun skipToNextStep() {
+        val state = _uiState.value
+        val calc = state.calculation ?: return
+        if (calc.steps.isEmpty()) return
+
+        if (state.currentStepIndex >= calc.steps.lastIndex) {
+            timerJob?.cancel()
+            _uiState.update {
+                it.copy(
+                    elapsedSeconds = calc.totalBrewTimeSec,
+                    currentStepIndex = calc.steps.lastIndex,
+                    isRunning = false,
+                    isPaused = false,
+                    isFinished = true,
+                    showStopAlert = true
+                )
+            }
+            viewModelScope.launch {
+                _stepTransitions.emit(
+                    StepTransitionEvent(newStepIndex = calc.steps.lastIndex, isFinished = true)
+                )
+            }
+            return
+        }
+
+        val nextIndex = state.currentStepIndex + 1
+        val nextStep = calc.steps[nextIndex]
+        _uiState.update {
+            it.copy(
+                currentStepIndex = nextIndex,
+                elapsedSeconds = nextStep.startTimeSec,
+                isFinished = false,
+                showStopAlert = false,
+                showCoach = false
+            )
+        }
+        viewModelScope.launch {
+            _stepTransitions.emit(StepTransitionEvent(newStepIndex = nextIndex, isFinished = false))
+        }
+    }
+
+    /** Jump back: restart current step, or previous if already at its start. */
+    fun goToPreviousStep() {
+        val state = _uiState.value
+        val calc = state.calculation ?: return
+        if (calc.steps.isEmpty()) return
+
+        val safeIndex = state.currentStepIndex.coerceIn(0, calc.steps.lastIndex)
+        val currentStart = calc.steps[safeIndex].startTimeSec
+        val targetIndex = if (!state.isFinished && state.elapsedSeconds > currentStart + 1) {
+            safeIndex
+        } else {
+            (safeIndex - 1).coerceAtLeast(0)
+        }
+        val targetStep = calc.steps[targetIndex]
+        val wasFinished = state.isFinished
+
+        _uiState.update {
+            it.copy(
+                currentStepIndex = targetIndex,
+                elapsedSeconds = targetStep.startTimeSec,
+                isFinished = false,
+                showStopAlert = false,
+                showCoach = false,
+                isPaused = if (wasFinished) true else it.isPaused,
+                isRunning = if (wasFinished) false else it.isRunning
+            )
+        }
+        viewModelScope.launch {
+            _stepTransitions.emit(StepTransitionEvent(newStepIndex = targetIndex, isFinished = false))
+        }
+    }
+
     fun dismissStopAlert() {
-        _uiState.update { it.copy(showStopAlert = false) }
+        _uiState.update { it.copy(showStopAlert = false, showCoach = true) }
+    }
+
+    fun dismissCoach() {
+        _uiState.update { it.copy(showCoach = false) }
+    }
+
+    fun coachAdvice(symptom: BrewSymptom?): BrewCoachAdvice {
+        val state = _uiState.value
+        return brewCoachUseCase(
+            elapsedSec = state.elapsedSeconds,
+            targetSec = state.calculation?.totalBrewTimeSec ?: 0,
+            symptom = symptom
+        )
     }
 
     private fun startTimerLoop() {

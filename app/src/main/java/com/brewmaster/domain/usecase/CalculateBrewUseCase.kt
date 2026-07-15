@@ -1,5 +1,6 @@
 package com.brewmaster.domain.usecase
 
+import com.brewmaster.domain.engine.BypassEngine
 import com.brewmaster.domain.engine.HoffmannEngine
 import com.brewmaster.domain.engine.HybridImmersionEngine
 import com.brewmaster.domain.engine.KasuyaEngine
@@ -56,6 +57,7 @@ class CalculateBrewUseCase @Inject constructor() {
             "hario_switch_hybrid" -> HybridImmersionEngine()
             "hybrid_immersion" -> HybridImmersionEngine()
             "single_cup" -> SingleCupEngine()
+            "bypass" -> BypassEngine()
             "custom" -> customSteps?.let { com.brewmaster.domain.engine.CustomEngine(it) } ?: SingleCupEngine()
             else -> SingleCupEngine()
         }

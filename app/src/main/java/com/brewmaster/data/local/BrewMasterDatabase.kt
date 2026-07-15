@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
         CoffeeBeanEntity::class,
         BrewLogEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class BrewMasterDatabase : RoomDatabase() {
@@ -80,6 +80,14 @@ abstract class BrewMasterDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE personal_recipes ADD COLUMN grinder_setting TEXT")
+                db.execSQL("ALTER TABLE personal_recipes ADD COLUMN temp_min INTEGER")
+                db.execSQL("ALTER TABLE personal_recipes ADD COLUMN temp_max INTEGER")
+            }
+        }
+
         fun prepopulateCallback(scope: CoroutineScope, provider: () -> BrewMasterDatabase): Callback {
             return object : Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
@@ -88,9 +96,8 @@ abstract class BrewMasterDatabase : RoomDatabase() {
                         val database = provider()
                         val processDao = database.coffeeProcessDao()
                         val beanDao = database.coffeeBeanDao()
-                        if (processDao.getCount() == 0) {
-                            processDao.insertAll(PREPOPULATED_PROCESSES)
-                        }
+                        // REPLACE keeps system process presets (temps/grind/ratio) in sync
+                        processDao.insertAll(PREPOPULATED_PROCESSES)
                         if (beanDao.getCount() == 0) {
                             beanDao.insertAll(PREPOPULATED_BEANS)
                         }
@@ -114,9 +121,9 @@ abstract class BrewMasterDatabase : RoomDatabase() {
                 id = 2,
                 processName = "Honey",
                 tempMin = 90,
-                tempMax = 92,
+                tempMax = 91,
                 grindRecommendation = "MEDIUM",
-                extractionNote = "High Sweetness",
+                extractionNote = "High Sweetness — keep temp modest, avoid over-extract",
                 restingDays = 15,
                 ratioMin = 16.0
             ),
@@ -133,32 +140,32 @@ abstract class BrewMasterDatabase : RoomDatabase() {
             CoffeeProcessEntity(
                 id = 4,
                 processName = "Anaerobic Washed",
-                tempMin = 93,
-                tempMax = 95,
+                tempMin = 92,
+                tempMax = 94,
                 grindRecommendation = "MEDIUM",
-                extractionNote = "Funky & Clean",
+                extractionNote = "Funky & Clean — don't chase winey harshness",
                 restingDays = 20,
                 ratioMin = 16.0
             ),
             CoffeeProcessEntity(
                 id = 5,
                 processName = "Anaerobic Natural",
-                tempMin = 90,
-                tempMax = 92,
-                grindRecommendation = "MEDIUM",
-                extractionNote = "Fruity & Winey",
+                tempMin = 91,
+                tempMax = 93,
+                grindRecommendation = "MEDIUM_COARSE",
+                extractionNote = "Fruity & Winey — slightly coarser, stop early if harsh",
                 restingDays = 20,
                 ratioMin = 16.0
             ),
             CoffeeProcessEntity(
                 id = 6,
                 processName = "Wet Hulled",
-                tempMin = 93,
-                tempMax = 95,
-                grindRecommendation = "MEDIUM_FINE",
-                extractionNote = "Earthy, herbal, syrupy body",
+                tempMin = 90,
+                tempMax = 93,
+                grindRecommendation = "MEDIUM",
+                extractionNote = "Earthy, herbal, syrupy body (Sumatera)",
                 restingDays = 15,
-                ratioMin = 16.0
+                ratioMin = 15.0
             ),
             CoffeeProcessEntity(
                 id = 7,
@@ -166,7 +173,7 @@ abstract class BrewMasterDatabase : RoomDatabase() {
                 tempMin = 85,
                 tempMax = 88,
                 grindRecommendation = "MEDIUM_COARSE",
-                extractionNote = "Heavy Body",
+                extractionNote = "Heavy Body — Robusta/dark: cooler water, faster brew",
                 restingDays = 10,
                 ratioMin = 15.0
             ),

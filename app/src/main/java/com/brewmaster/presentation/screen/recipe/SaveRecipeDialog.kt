@@ -1,6 +1,5 @@
 package com.brewmaster.presentation.screen.recipe
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.brewmaster.domain.model.GrindSize
@@ -37,16 +38,28 @@ fun SaveRecipeDialog(
     currentTechniqueId: String,
     currentProcessId: Int,
     currentGrindSize: GrindSize,
+    currentGrinderSetting: String? = null,
+    currentTempMin: Int? = null,
+    currentTempMax: Int? = null,
     currentRatio: Double,
     currentCoffeeWeight: Double,
     currentIsIce: Boolean,
     currentIceWeight: Double?,
-    onSave: (beanName: String, notes: String?) -> Unit,
+    onSave: (beanName: String, notes: String?, tempMin: Int?, tempMax: Int?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var beanName by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var beanNameError by remember { mutableStateOf(false) }
+    var tempMinText by remember { mutableStateOf(currentTempMin?.toString().orEmpty()) }
+    var tempMaxText by remember { mutableStateOf(currentTempMax?.toString().orEmpty()) }
+    var tempError by remember { mutableStateOf(false) }
+
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        cursorColor = MaterialTheme.colorScheme.primary,
+        focusedLabelColor = MaterialTheme.colorScheme.primary
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -82,12 +95,58 @@ fun SaveRecipeDialog(
                     } else null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary
-                    )
+                    colors = fieldColors
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Water temp (°C)",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = tempMinText,
+                        onValueChange = {
+                            tempMinText = it.filter { ch -> ch.isDigit() }
+                            tempError = false
+                        },
+                        label = { Text("Min") },
+                        placeholder = { Text("90") },
+                        singleLine = true,
+                        isError = tempError,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = fieldColors
+                    )
+                    OutlinedTextField(
+                        value = tempMaxText,
+                        onValueChange = {
+                            tempMaxText = it.filter { ch -> ch.isDigit() }
+                            tempError = false
+                        },
+                        label = { Text("Max") },
+                        placeholder = { Text("94") },
+                        singleLine = true,
+                        isError = tempError,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = fieldColors
+                    )
+                }
+                if (tempError) {
+                    Text(
+                        text = "Enter a valid temp range (e.g. 90–94)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -99,11 +158,7 @@ fun SaveRecipeDialog(
                     minLines = 3,
                     maxLines = 5,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary
-                    )
+                    colors = fieldColors
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -122,7 +177,8 @@ fun SaveRecipeDialog(
 
                 ParamRow("Technique", currentTechniqueId)
                 ParamRow("Process", "#$currentProcessId")
-                ParamRow("Grind", currentGrindSize.label)
+                ParamRow("Grind size", currentGrindSize.label)
+                currentGrinderSetting?.let { ParamRow("Grinder dial", it) }
                 ParamRow("Coffee", "${currentCoffeeWeight}g")
                 ParamRow("Ratio", "1:$currentRatio")
                 if (currentIsIce && currentIceWeight != null) {
@@ -146,9 +202,29 @@ fun SaveRecipeDialog(
                         onClick = {
                             if (beanName.isBlank()) {
                                 beanNameError = true
-                            } else {
-                                onSave(beanName.trim(), notes.trim().ifBlank { null })
+                                return@Button
                             }
+                            val min = tempMinText.toIntOrNull()
+                            val max = tempMaxText.toIntOrNull()
+                            val tempsOk = when {
+                                tempMinText.isBlank() && tempMaxText.isBlank() -> true
+                                min != null && max != null && min in 70..100 && max in 70..100 && min <= max -> true
+                                min != null && tempMaxText.isBlank() && min in 70..100 -> true
+                                max != null && tempMinText.isBlank() && max in 70..100 -> true
+                                else -> false
+                            }
+                            if (!tempsOk) {
+                                tempError = true
+                                return@Button
+                            }
+                            val resolvedMin = min ?: max
+                            val resolvedMax = max ?: min
+                            onSave(
+                                beanName.trim(),
+                                notes.trim().ifBlank { null },
+                                resolvedMin,
+                                resolvedMax
+                            )
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,

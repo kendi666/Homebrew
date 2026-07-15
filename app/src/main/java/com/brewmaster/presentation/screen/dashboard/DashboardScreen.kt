@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,6 +45,8 @@ import com.brewmaster.domain.model.BrewCalculation
 import com.brewmaster.domain.model.BrewMode
 import com.brewmaster.domain.model.CoffeeProcess
 import com.brewmaster.presentation.component.BrewModeToggle
+import com.brewmaster.presentation.component.BrewSuggestionRow
+import com.brewmaster.presentation.component.FilterDialPicker
 import com.brewmaster.presentation.component.CoffeeBeanPickerCard
 import com.brewmaster.presentation.component.CoffeeBeanPickerSheet
 import com.brewmaster.presentation.component.GrindSizeSelector
@@ -78,11 +82,16 @@ fun DashboardScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
+    ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .padding(bottom = 140.dp)
     ) {
         // --- Header ---
         Row(
@@ -248,6 +257,26 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
+        state.selectedGrinder?.let { grinder ->
+            Spacer(Modifier.height(12.dp))
+            FilterDialPicker(
+                grinder = grinder,
+                selectedDial = state.grinderClicks.ifBlank {
+                    grinder.filterDialLabels().getOrNull(grinder.filterDialLabels().size / 2).orEmpty()
+                },
+                onDialSelected = viewModel::onGrinderClicksChanged
+            )
+        }
+
+        if (state.suggestions.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            BrewSuggestionRow(
+                suggestions = state.suggestions,
+                selectedTechniqueId = state.selectedTechnique?.id,
+                onSelect = viewModel::onSuggestionSelected
+            )
+        }
+
         Spacer(Modifier.height(16.dp))
 
         // --- Brew Mode ---
@@ -265,7 +294,7 @@ fun DashboardScreen(
             exit = shrinkVertically() + fadeOut()
         ) {
             ParameterCard(
-                label = "Ice Weight",
+                label = "Ice Weight (default 40% of total)",
                 value = state.iceWeight,
                 onValueChange = viewModel::onIceWeightChanged,
                 suffix = "g",
@@ -300,51 +329,23 @@ fun DashboardScreen(
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
-
-            // --- Save Recipe Button ---
-            OutlinedButton(
-                onClick = viewModel::onSaveRecipeOpen,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = LimeGreen
-                )
-            ) {
-                Text(
-                    text = "SAVE RECIPE",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            // --- Start Brewing Button ---
-            Button(
-                onClick = { onStartBrewing(calc) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = LimeGreen,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Text(
-                    text = "START BREWING",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
+    }
+
+    state.calculation?.let { calc ->
+        StickyBrewBar(
+            calculation = calc,
+            isIce = state.brewMode == BrewMode.ICE,
+            dial = state.grinderClicks.ifBlank { null },
+            onSave = viewModel::onSaveRecipeOpen,
+            onStart = { onStartBrewing(calc) },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+        )
     }
 
     if (state.showSaveRecipeDialog) {
@@ -353,6 +354,9 @@ fun DashboardScreen(
                 currentTechniqueId = calc.technique.id,
                 currentProcessId = state.selectedProcess?.id ?: 0,
                 currentGrindSize = calc.grindSize,
+                currentGrinderSetting = state.grinderClicks.ifBlank { null },
+                currentTempMin = calc.tempMin,
+                currentTempMax = calc.tempMax,
                 currentRatio = state.ratio.replace(',', '.').toDoubleOrNull() ?: calc.totalVolume / calc.coffeeWeight,
                 currentCoffeeWeight = calc.coffeeWeight,
                 currentIsIce = state.brewMode == BrewMode.ICE,
@@ -377,6 +381,7 @@ fun DashboardScreen(
             )
         }
     }
+    } // Box
 }
 
 @Composable
@@ -406,6 +411,80 @@ private fun SectionLabel(text: String) {
         modifier = Modifier.padding(horizontal = 16.dp),
         letterSpacing = MaterialTheme.typography.labelMedium.letterSpacing * 1.5f
     )
+}
+
+
+@Composable
+private fun StickyBrewBar(
+    calculation: BrewCalculation,
+    isIce: Boolean,
+    dial: String?,
+    onSave: () -> Unit,
+    onStart: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val ratio = calculation.totalVolume / calculation.coffeeWeight
+    val ratioText = if (ratio == ratio.toLong().toDouble()) {
+        ratio.toLong().toString()
+    } else {
+        "%.1f".format(ratio)
+    }
+    val summary = buildString {
+        append("${formatWeight(calculation.coffeeWeight)}g")
+        append(" · 1:$ratioText")
+        append(" · ${calculation.tempMin}–${calculation.tempMax}°C")
+        dial?.let { append(" · dial $it") }
+        if (isIce) append(" · ICE")
+    }
+
+    Surface(
+        modifier = modifier,
+        color = DarkCard,
+        shadowElevation = 12.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.labelLarge,
+                color = LimeGreen,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onSave,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = LimeGreen)
+                ) {
+                    Text("SAVE", fontWeight = FontWeight.Bold)
+                }
+                Button(
+                    onClick = onStart,
+                    modifier = Modifier
+                        .weight(2f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = LimeGreen,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text("START BREWING", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
 }
 
 @Composable

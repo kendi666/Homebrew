@@ -33,7 +33,10 @@ object RecipeShareCodec {
         val coffeeWeight: Double,
         val isIce: Boolean,
         val iceWeight: Double? = null,
-        val notes: String? = null
+        val notes: String? = null,
+        val grinderSetting: String? = null,
+        val tempMin: Int? = null,
+        val tempMax: Int? = null
     )
 
     /** Builds the brewmaster://recipe?d=... deep link for a recipe. */
@@ -47,7 +50,10 @@ object RecipeShareCodec {
             coffeeWeight = recipe.coffeeWeight,
             isIce = recipe.isIce,
             iceWeight = recipe.iceWeight,
-            notes = recipe.notes
+            notes = recipe.notes,
+            grinderSetting = recipe.grinderSetting,
+            tempMin = recipe.tempMin,
+            tempMax = recipe.tempMax
         )
         val payload = json.encodeToString(dto)
         val code = Base64.encodeToString(
@@ -78,7 +84,10 @@ object RecipeShareCodec {
                 isIce = dto.isIce,
                 iceWeight = dto.iceWeight,
                 notes = dto.notes,
-                createdAt = System.currentTimeMillis()
+                createdAt = System.currentTimeMillis(),
+                grinderSetting = dto.grinderSetting,
+                tempMin = dto.tempMin,
+                tempMax = dto.tempMax
             )
         } catch (e: Exception) {
             null

@@ -47,7 +47,10 @@ class RecipeRepositoryImpl @Inject constructor(
             isIce = isIce,
             iceWeight = iceWeight,
             notes = notes,
-            createdAt = createdAt
+            createdAt = createdAt,
+            grinderSetting = grinderSetting,
+            tempMin = tempMin,
+            tempMax = tempMax
         )
     }
 
@@ -63,7 +66,10 @@ class RecipeRepositoryImpl @Inject constructor(
             isIce = isIce,
             iceWeight = iceWeight,
             notes = notes,
-            createdAt = createdAt
+            createdAt = createdAt,
+            grinderSetting = grinderSetting,
+            tempMin = tempMin,
+            tempMax = tempMax
         )
     }
 }
