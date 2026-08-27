@@ -5,6 +5,17 @@ All notable changes to BrewMaster are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-26
+
+### Added
+- **Grind Convert** — convert a dial from any listed grinder to the others via
+  one estimated-particle micron bridge (Hayati / FM 120).
+- Calibrated: **FM 120**, **1Zpresso K-Ultra**, **Guerrero GR64 / 64 Pro**,
+  **Timemore Sculptor** (`M = 75×FM + 50`; Sculptor `= 0.5×FM + 2`;
+  K-Ultra `= M/100 − 0.5`; Guerrero `= (M − 150)/11`).
+- Fitted onto the same µm: **Timemore C3**, **C5 / C5 Pro**, **1Zpresso JX-S / JX**.
+- Dashboard quick action **Grind Convert**.
+
 ## [1.2.0] - 2026-07-15
 
 ### Added

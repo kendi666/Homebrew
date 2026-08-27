@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +20,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -71,7 +71,8 @@ fun DashboardScreen(
     onNavigateToCheatSheet: () -> Unit = {},
     onNavigateToJournal: () -> Unit = {},
     onNavigateToTroubleshoot: () -> Unit = {},
-    viewModel: DashboardViewModel = hiltViewModel()
+    onNavigateToGrindConvert: () -> Unit = {},
+    viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -147,11 +148,13 @@ fun DashboardScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
                 .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             QuickActionChip(text = "Brew Journal", onClick = onNavigateToJournal)
             QuickActionChip(text = "Troubleshoot", onClick = onNavigateToTroubleshoot)
+            QuickActionChip(text = "Grind Convert", onClick = onNavigateToGrindConvert)
         }
 
         // --- Technique Selector ---
@@ -357,7 +360,7 @@ fun DashboardScreen(
                 currentGrinderSetting = state.grinderClicks.ifBlank { null },
                 currentTempMin = calc.tempMin,
                 currentTempMax = calc.tempMax,
-                currentRatio = state.ratio.replace(',', '.').toDoubleOrNull() ?: calc.totalVolume / calc.coffeeWeight,
+                currentRatio = state.ratio.replace(',', '.').toDoubleOrNull() ?: (calc.totalVolume / calc.coffeeWeight),
                 currentCoffeeWeight = calc.coffeeWeight,
                 currentIsIce = state.brewMode == BrewMode.ICE,
                 currentIceWeight = if (state.brewMode == BrewMode.ICE) calc.iceWeight else null,

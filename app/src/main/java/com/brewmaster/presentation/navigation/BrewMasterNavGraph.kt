@@ -10,6 +10,7 @@ import com.brewmaster.presentation.screen.dashboard.DashboardScreen
 import com.brewmaster.presentation.screen.brew.BrewTimerScreen
 import com.brewmaster.presentation.screen.journal.BrewJournalScreen
 import com.brewmaster.presentation.screen.recipe.RecipeListScreen
+import com.brewmaster.presentation.screen.convert.GrindConvertScreen
 import com.brewmaster.presentation.screen.troubleshoot.TroubleshootScreen
 
 @Composable
@@ -32,6 +33,9 @@ fun BrewMasterNavGraph(navController: NavHostController) {
                 },
                 onNavigateToTroubleshoot = {
                     navController.navigate("troubleshoot")
+                },
+                onNavigateToGrindConvert = {
+                    navController.navigate("grind_convert")
                 }
             )
         }
@@ -61,6 +65,11 @@ fun BrewMasterNavGraph(navController: NavHostController) {
         }
         composable("troubleshoot") {
             TroubleshootScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable("grind_convert") {
+            GrindConvertScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
