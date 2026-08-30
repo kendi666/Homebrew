@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Grind Convert** — convert a dial from any listed grinder to the others via
-  one estimated-particle micron bridge (Hayati / FM 120).
+  one estimated-particle micron bridge (FM 120).
 - Calibrated: **FM 120**, **1Zpresso K-Ultra**, **Guerrero GR64 / 64 Pro**,
   **Timemore Sculptor** (`M = 75×FM + 50`; Sculptor `= 0.5×FM + 2`;
   K-Ultra `= M/100 − 0.5`; Guerrero `= (M − 150)/11`).

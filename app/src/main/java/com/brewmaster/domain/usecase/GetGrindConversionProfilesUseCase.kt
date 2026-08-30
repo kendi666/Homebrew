@@ -4,7 +4,7 @@ import com.brewmaster.domain.model.GrindConversionProfile
 import javax.inject.Inject
 
 /**
- * Dial ↔ dial conversion via one estimated-particle micron bridge (Hayati).
+ * Dial ↔ dial conversion via one estimated-particle micron bridge.
  *
  *   M = 75 * FM120 + 50
  *   Sculptor = 0.5 * FM120 + 2      →  M = 150 * SC − 250
@@ -29,7 +29,7 @@ class GetGrindConversionProfilesUseCase @Inject constructor() {
                 dialMin = 1.0,
                 dialMax = 12.0,
                 dialStep = 0.1,
-                note = "Hayati: espresso ~4.0 (350 µm), filter ~8.0 (650 µm), Gesha ~11–12",
+                note = "Espresso ~4.0 (350 µm), filter ~8.0 (650 µm), Gesha ~11–12",
                 calibrated = true
             ),
             GrindConversionProfile(
@@ -41,7 +41,7 @@ class GetGrindConversionProfilesUseCase @Inject constructor() {
                 dialMin = 0.0,
                 dialMax = 11.0,
                 dialStep = 0.1,
-                note = "Hayati: D = M/100 − 0.5 (not factory 20 µm/click gap)",
+                note = "D = M/100 − 0.5 (not factory 20 µm/click gap)",
                 calibrated = true
             ),
             GrindConversionProfile(
@@ -53,7 +53,7 @@ class GetGrindConversionProfilesUseCase @Inject constructor() {
                 dialMin = 0.0,
                 dialMax = 90.0,
                 dialStep = 1.0,
-                note = "Hayati: M = 11×dial + 150; espresso start ~18",
+                note = "M = 11×dial + 150; espresso start ~18",
                 calibrated = true
             ),
             GrindConversionProfile(
@@ -66,7 +66,7 @@ class GetGrindConversionProfilesUseCase @Inject constructor() {
                 dialMax = 18.0,
                 dialStep = 0.5,
                 unitLabel = "dial",
-                note = "Hayati board: D = 0.5×FM + 2 (filter ~6–8, Watermelon ~4)",
+                note = "D = 0.5×FM + 2 (filter ~6–8)",
                 calibrated = true
             ),
             GrindConversionProfile(

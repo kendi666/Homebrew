@@ -99,7 +99,7 @@ fun GrindConvertScreen(
         ) {
             item {
                 Text(
-                    text = "Hayati micron bridge: FM 120 / K-Ultra / Guerrero 64 Pro / Sculptor are calibrated. C3, C5, and JX-S share the same µm estimate — dial to taste.",
+                    text = "FM 120 micron bridge: K-Ultra / Guerrero 64 Pro / Sculptor are calibrated. C3, C5, and JX-S share the same µm estimate — dial to taste.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                     modifier = Modifier.padding(horizontal = 16.dp)

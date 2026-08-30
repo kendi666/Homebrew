@@ -7,7 +7,7 @@ import kotlin.math.round
  *
  * micron ≈ slope * dial + intercept
  *
- * Hayati FM 120 is the master scale. Always dial to taste.
+ * FM 120 is the master scale. Always dial to taste.
  */
 data class GrindConversionProfile(
     val id: String,
