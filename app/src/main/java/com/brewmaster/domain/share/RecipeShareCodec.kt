@@ -78,7 +78,7 @@ object RecipeShareCodec {
                 beanName = dto.beanName,
                 techniqueId = dto.techniqueId,
                 processId = dto.processId,
-                grindSize = runCatching { GrindSize.valueOf(dto.grindSize) }.getOrDefault(GrindSize.MEDIUM),
+                grindSize = GrindSize.fromStored(dto.grindSize),
                 ratio = dto.ratio,
                 coffeeWeight = dto.coffeeWeight,
                 isIce = dto.isIce,

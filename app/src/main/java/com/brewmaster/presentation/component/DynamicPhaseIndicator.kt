@@ -41,8 +41,8 @@ fun DynamicPhaseIndicator(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)),
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp)),
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             steps.forEachIndexed { index, step ->
@@ -56,7 +56,7 @@ fun DynamicPhaseIndicator(
                 Box(
                     modifier = Modifier
                         .weight(weight.coerceAtLeast(0.05f))
-                        .height(8.dp)
+                        .height(6.dp)
                         .clip(RoundedCornerShape(4.dp))
                         .background(color)
                 )
@@ -82,8 +82,8 @@ fun DynamicPhaseIndicator(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = step.name,
-                        style = MaterialTheme.typography.labelMedium,
+                        text = if (step.waterAmount > 0.0) "${step.cumulativeWater.toInt()}g" else step.name,
+                        style = MaterialTheme.typography.labelSmall,
                         color = labelColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

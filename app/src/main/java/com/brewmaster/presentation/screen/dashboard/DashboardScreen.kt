@@ -75,9 +75,10 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val incomingRecipe by BrewSession.pendingRecipe.collectAsState()
 
-    LaunchedEffect(Unit) {
-        BrewSession.selectedRecipe?.let { recipe ->
+    LaunchedEffect(incomingRecipe) {
+        incomingRecipe?.let { recipe ->
             viewModel.loadRecipe(recipe)
             BrewSession.selectedRecipe = null
         }

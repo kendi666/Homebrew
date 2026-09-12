@@ -5,6 +5,36 @@ All notable changes to BrewMaster are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **App icon** — launcher uses the Homebrew dripper + carafe mark (paper
+  background, wordmark kept inside the adaptive-icon safe zone).
+- **Brew timer redesign** — ring now shows progress of the current step while the
+  centre keeps counting total time up; footer points to the next step
+  (`next: Pour 2 at 1:15`). Headline `ADD 100 g → 150 g` with the step
+  instruction, a Poured / Target / Rate row (target g/s from the recipe), and
+  the phase bar labels each pour with its cumulative grams. Controls are two
+  wide Pause / Next step buttons with Prev step · Reset as text actions.
+
+### Fixed
+- **B3** Room no longer falls back to wiping the DB. Added 1/2/3→4 table-create
+  migrations (history starts at v4) and `exportSchema` so later upgrades can be
+  validated. `fallbackToDestructiveMigration()` removed.
+- **B2** `GrindSize.fromStored()` — a bad/unknown grind string in recipes,
+  process presets, brew logs, or share links maps to Medium instead of crashing
+  the Flow.
+- **B1** ICE mode caps ice so hot water stays ≥ 8× dose (bloom + remaining pour,
+  including Bypass concentrate). Pour amounts no longer go negative; the stored
+  ice weight is the capped value.
+- **B4** Deep-link / shared recipe while the app is already open is applied:
+  `BrewSession.pendingRecipe` is a StateFlow the dashboard collects, not a
+  one-shot `LaunchedEffect(Unit)`.
+- **B5** Import retries until process + bean catalogs have loaded, so a cold-start
+  deep link no longer drops process/bean.
+- **B7** Timer step-transition events are emitted *after* `_uiState.update`, not
+  inside the updater lambda (avoids duplicate haptic / skip events).
+
 ## [1.3.0] - 2026-08-26
 
 ### Added

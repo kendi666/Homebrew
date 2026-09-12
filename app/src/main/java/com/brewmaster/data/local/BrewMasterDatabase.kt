@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
         BrewLogEntity::class
     ],
     version = 7,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class BrewMasterDatabase : RoomDatabase() {
 
@@ -33,6 +33,58 @@ abstract class BrewMasterDatabase : RoomDatabase() {
     abstract fun brewLogDao(): BrewLogDao
 
     companion object {
+
+        /**
+         * Git history starts at v4; v1–v3 never shipped a different schema here.
+         * These jumps create the v4 tables if missing so Room can then apply 4→7
+         * instead of wiping the DB (B3). CREATE IF NOT EXISTS is a no-op when
+         * the tables already exist.
+         */
+        val MIGRATION_1_4 = migrationToV4(1)
+        val MIGRATION_2_4 = migrationToV4(2)
+        val MIGRATION_3_4 = migrationToV4(3)
+
+        private fun migrationToV4(from: Int) = object : Migration(from, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `coffee_processes` (" +
+                        "`id` INTEGER NOT NULL, " +
+                        "`process_name` TEXT NOT NULL, " +
+                        "`temp_min` INTEGER NOT NULL, " +
+                        "`temp_max` INTEGER NOT NULL, " +
+                        "`grind_recommendation` TEXT NOT NULL, " +
+                        "`extraction_note` TEXT NOT NULL, " +
+                        "`resting_days` INTEGER NOT NULL, " +
+                        "`ratio_min` REAL NOT NULL, " +
+                        "PRIMARY KEY(`id`))"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `coffee_beans` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`origin` TEXT NOT NULL, " +
+                        "`process_id` INTEGER NOT NULL, " +
+                        "`process_name` TEXT NOT NULL, " +
+                        "`roast_level` TEXT NOT NULL, " +
+                        "`notes` TEXT, " +
+                        "`resting_days` INTEGER)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `personal_recipes` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`bean_name` TEXT NOT NULL, " +
+                        "`technique_id` TEXT NOT NULL, " +
+                        "`process_id` INTEGER NOT NULL, " +
+                        "`grind_size` TEXT NOT NULL, " +
+                        "`ratio` REAL NOT NULL, " +
+                        "`coffee_weight` REAL NOT NULL, " +
+                        "`is_ice` INTEGER NOT NULL, " +
+                        "`ice_weight` REAL, " +
+                        "`notes` TEXT, " +
+                        "`created_at` INTEGER NOT NULL)"
+                )
+            }
+        }
 
         /**
          * Non-destructive upgrade from v4 to v5: adds the new "Infused" coffee

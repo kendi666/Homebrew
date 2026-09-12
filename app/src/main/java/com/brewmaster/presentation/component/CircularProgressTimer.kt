@@ -19,37 +19,36 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.brewmaster.presentation.theme.DarkSurfaceVariant
 import com.brewmaster.presentation.theme.LimeGreen
+import com.brewmaster.presentation.theme.TextMuted
 import com.brewmaster.presentation.theme.TextSecondary
 
+/**
+ * Ring = progress of the *current step*; centre = total elapsed (counts up).
+ * [footer] is a short hint such as "until 1:15" or "next: Pour 2".
+ */
 @Composable
 fun CircularProgressTimer(
     elapsedSeconds: Int,
-    totalSeconds: Int,
+    stepProgress: Float,
     currentStepName: String,
+    footer: String,
     modifier: Modifier = Modifier
 ) {
-    val progress = if (totalSeconds > 0) {
-        (elapsedSeconds.toFloat() / totalSeconds).coerceIn(0f, 1f)
-    } else 0f
-
     val minutes = elapsedSeconds / 60
     val seconds = elapsedSeconds % 60
     val timeText = "%02d:%02d".format(minutes, seconds)
 
-    val trackColor = DarkSurfaceVariant
-    val progressColor = LimeGreen
-
     Box(
         contentAlignment = Alignment.Center,
-        modifier = modifier.size(280.dp)
+        modifier = modifier.size(240.dp)
     ) {
-        Canvas(modifier = Modifier.size(280.dp)) {
-            val strokeWidth = 12.dp.toPx()
+        Canvas(modifier = Modifier.size(240.dp)) {
+            val strokeWidth = 14.dp.toPx()
             val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
             val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
 
             drawArc(
-                color = trackColor,
+                color = DarkSurfaceVariant,
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
@@ -59,9 +58,9 @@ fun CircularProgressTimer(
             )
 
             drawArc(
-                color = progressColor,
+                color = LimeGreen,
                 startAngle = -90f,
-                sweepAngle = 360f * progress,
+                sweepAngle = 360f * stepProgress.coerceIn(0f, 1f),
                 useCenter = false,
                 topLeft = topLeft,
                 size = arcSize,
@@ -74,18 +73,22 @@ fun CircularProgressTimer(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
+                text = currentStepName.uppercase(),
+                style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.5.sp),
+                color = TextMuted
+            )
+            Text(
                 text = timeText,
                 style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 56.sp,
+                    fontSize = 52.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
+                    letterSpacing = 1.sp
                 ),
                 color = LimeGreen
             )
-
             Text(
-                text = currentStepName.uppercase(),
-                style = MaterialTheme.typography.labelLarge,
+                text = footer,
+                style = MaterialTheme.typography.labelMedium,
                 color = TextSecondary
             )
         }

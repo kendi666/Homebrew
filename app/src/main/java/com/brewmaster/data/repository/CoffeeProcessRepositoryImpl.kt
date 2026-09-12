@@ -29,7 +29,7 @@ class CoffeeProcessRepositoryImpl @Inject constructor(
             processName = processName,
             tempMin = tempMin,
             tempMax = tempMax,
-            grindRecommendation = GrindSize.valueOf(grindRecommendation),
+            grindRecommendation = GrindSize.fromStored(grindRecommendation),
             extractionNote = extractionNote,
             restingDays = restingDays,
             ratioMin = ratioMin

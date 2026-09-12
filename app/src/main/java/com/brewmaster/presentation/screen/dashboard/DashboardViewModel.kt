@@ -53,14 +53,14 @@ data class DashboardUiState(
     val customTempMax: Int = 94,
     val customSteps: List<com.brewmaster.domain.model.CustomStepConfig> = listOf(
         com.brewmaster.domain.model.CustomStepConfig(com.brewmaster.domain.model.StepAction.BLOOM, 45, 0.20),
-        com.brewmaster.domain.model.CustomStepConfig(com.brewmaster.domain.model.StepAction.POUR, 135, 0.80)
+        com.brewmaster.domain.model.CustomStepConfig(com.brewmaster.domain.model.StepAction.POUR, 135, 0.80),
     )
 )
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val calculateBrewUseCase: CalculateBrewUseCase,
-    private val getTechniquesUseCase: GetTechniquesUseCase,
+    getTechniquesUseCase: GetTechniquesUseCase,
     private val getProcessPresetsUseCase: GetProcessPresetsUseCase,
     private val getBeansUseCase: GetBeansUseCase,
     private val saveRecipeUseCase: SaveRecipeUseCase,
@@ -110,6 +110,7 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             getBeansUseCase().collect { beans ->
                 _uiState.update { it.copy(beans = beans) }
+                pendingRecipe?.let(::applyRecipe)
             }
         }
     }
@@ -163,7 +164,7 @@ class DashboardViewModel @Inject constructor(
         val dials = grinder.filterDialLabels()
         val current = _uiState.value.grinderClicks
         val dial = when {
-            current.isNotBlank() && current in dials -> current
+            current.isNotBlank() && (current in dials) -> current
             else -> dials.getOrNull(dials.size / 2).orEmpty()
         }
         _uiState.update { it.copy(selectedGrinder = grinder, grinderClicks = dial) }
@@ -297,7 +298,7 @@ class DashboardViewModel @Inject constructor(
         val state = _uiState.value
         val technique = state.selectedTechnique ?: return
         val coffeeWeight = parseDecimal(state.coffeeWeight) ?: return
-        val ratio = parseDecimal(state.ratio) ?: return
+        val ratio = parseDecimal(state.ratio) ?: (state.calculation?.let { it.totalVolume / it.coffeeWeight }) ?: return
         val iceWeight = if (state.brewMode == BrewMode.ICE) {
             parseDecimal(state.iceWeight)
         } else {
@@ -357,7 +358,11 @@ class DashboardViewModel @Inject constructor(
         } else {
             null
         }
-        pendingRecipe = null
+        // B5: only drop the pending import once Room catalogs have arrived;
+        // otherwise the process/bean collectors retry applyRecipe.
+        if (state.processes.isNotEmpty() && state.beans.isNotEmpty()) {
+            pendingRecipe = null
+        }
         recalculate()
     }
 

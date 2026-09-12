@@ -33,7 +33,7 @@ class BrewLogRepositoryImpl @Inject constructor(
             beanName = beanName,
             techniqueId = techniqueId,
             processId = processId,
-            grindSize = runCatching { GrindSize.valueOf(grindSize) }.getOrDefault(GrindSize.MEDIUM),
+            grindSize = GrindSize.fromStored(grindSize),
             ratio = ratio,
             coffeeWeight = coffeeWeight,
             isIce = isIce,

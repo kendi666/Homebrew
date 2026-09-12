@@ -41,7 +41,7 @@ class RecipeRepositoryImpl @Inject constructor(
             beanName = beanName,
             techniqueId = techniqueId,
             processId = processId,
-            grindSize = GrindSize.valueOf(grindSize),
+            grindSize = GrindSize.fromStored(grindSize),
             ratio = ratio,
             coffeeWeight = coffeeWeight,
             isIce = isIce,

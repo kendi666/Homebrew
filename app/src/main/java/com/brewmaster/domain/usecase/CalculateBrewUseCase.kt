@@ -41,8 +41,16 @@ class CalculateBrewUseCase @Inject constructor() {
         val adjustedRatio = (ratio + targetProfile.ratioOffset).coerceAtLeast(10.0)
 
         val totalVolume = coffeeWeight * adjustedRatio
+        // B1: keep enough hot water for bloom (up to 3×) + a remaining pour, including
+        // Bypass's 8× concentrate floor, so engines never emit negative pour grams.
+        val minHotWater = coffeeWeight * MIN_HOT_MULTIPLIER
+        val cappedIce = if (brewMode == BrewMode.ICE) {
+            iceWeight.coerceAtLeast(0.0).coerceAtMost((totalVolume - minHotWater).coerceAtLeast(0.0))
+        } else {
+            0.0
+        }
         val hotWaterVolume = if (brewMode == BrewMode.ICE) {
-            (totalVolume - iceWeight).coerceAtLeast(coffeeWeight * 2)
+            (totalVolume - cappedIce).coerceAtLeast(minHotWater)
         } else {
             totalVolume
         }
@@ -62,7 +70,11 @@ class CalculateBrewUseCase @Inject constructor() {
             else -> SingleCupEngine()
         }
 
-        val steps = engine.generateSteps(coffeeWeight, hotWaterVolume)
+        val steps = if (coffeeWeight <= 0.0 || hotWaterVolume <= 0.0) {
+            emptyList()
+        } else {
+            engine.generateSteps(coffeeWeight, hotWaterVolume)
+        }
 
         // Temperature resolution: technique defaults -> process override -> profile offset
         var tempMin: Int
@@ -114,7 +126,7 @@ class CalculateBrewUseCase @Inject constructor() {
             coffeeWeight = coffeeWeight,
             totalVolume = totalVolume,
             hotWaterVolume = hotWaterVolume,
-            iceWeight = if (brewMode == BrewMode.ICE) iceWeight else 0.0,
+            iceWeight = cappedIce,
             tempMin = tempMin,
             tempMax = tempMax,
             grindSize = grindSize,
@@ -124,6 +136,10 @@ class CalculateBrewUseCase @Inject constructor() {
             targetProfile = targetProfile,
             beanName = bean?.name
         )
+    }
+
+    companion object {
+        private const val MIN_HOT_MULTIPLIER = 8.0
     }
 
 }

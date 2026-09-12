@@ -31,11 +31,13 @@ object DatabaseModule {
             "brewmaster.db"
         )
             .addMigrations(
+                BrewMasterDatabase.MIGRATION_1_4,
+                BrewMasterDatabase.MIGRATION_2_4,
+                BrewMasterDatabase.MIGRATION_3_4,
                 BrewMasterDatabase.MIGRATION_4_5,
                 BrewMasterDatabase.MIGRATION_5_6,
                 BrewMasterDatabase.MIGRATION_6_7
             )
-            .fallbackToDestructiveMigration()
             .addCallback(BrewMasterDatabase.prepopulateCallback(scope) { instance!! })
             .build()
             .also { instance = it }

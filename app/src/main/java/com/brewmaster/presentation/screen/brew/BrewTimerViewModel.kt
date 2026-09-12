@@ -119,11 +119,9 @@ class BrewTimerViewModel @Inject constructor(
                     showStopAlert = true
                 )
             }
-            viewModelScope.launch {
-                _stepTransitions.emit(
-                    StepTransitionEvent(newStepIndex = calc.steps.lastIndex, isFinished = true)
-                )
-            }
+            _stepTransitions.tryEmit(
+                StepTransitionEvent(newStepIndex = calc.steps.lastIndex, isFinished = true)
+            )
             return
         }
 
@@ -138,9 +136,7 @@ class BrewTimerViewModel @Inject constructor(
                 showCoach = false
             )
         }
-        viewModelScope.launch {
-            _stepTransitions.emit(StepTransitionEvent(newStepIndex = nextIndex, isFinished = false))
-        }
+        _stepTransitions.tryEmit(StepTransitionEvent(newStepIndex = nextIndex, isFinished = false))
     }
 
     /** Jump back: restart current step, or previous if already at its start. */
@@ -170,9 +166,7 @@ class BrewTimerViewModel @Inject constructor(
                 isRunning = if (wasFinished) false else it.isRunning
             )
         }
-        viewModelScope.launch {
-            _stepTransitions.emit(StepTransitionEvent(newStepIndex = targetIndex, isFinished = false))
-        }
+        _stepTransitions.tryEmit(StepTransitionEvent(newStepIndex = targetIndex, isFinished = false))
     }
 
     fun dismissStopAlert() {
@@ -204,42 +198,40 @@ class BrewTimerViewModel @Inject constructor(
     }
 
     private fun onTimerTick() {
-        _uiState.update { state ->
-            val calc = state.calculation ?: return@update state
-            val newElapsed = state.elapsedSeconds + 1
+        val state = _uiState.value
+        val calc = state.calculation ?: return
+        val newElapsed = state.elapsedSeconds + 1
 
-            if (newElapsed >= calc.totalBrewTimeSec) {
-                viewModelScope.launch {
-                    _stepTransitions.emit(
-                        StepTransitionEvent(
-                            newStepIndex = calc.steps.lastIndex,
-                            isFinished = true
-                        )
-                    )
-                }
-                return@update state.copy(
+        if (newElapsed >= calc.totalBrewTimeSec) {
+            val lastIndex = calc.steps.lastIndex.coerceAtLeast(0)
+            _uiState.update {
+                it.copy(
                     elapsedSeconds = calc.totalBrewTimeSec,
+                    currentStepIndex = lastIndex,
                     isRunning = false,
                     isFinished = true,
                     showStopAlert = true
                 )
             }
+            _stepTransitions.tryEmit(
+                StepTransitionEvent(newStepIndex = lastIndex, isFinished = true)
+            )
+            return
+        }
 
-            val currentStep = calc.steps.getOrNull(state.currentStepIndex)
-            var newIndex = state.currentStepIndex
+        val currentStep = calc.steps.getOrNull(state.currentStepIndex)
+        val newIndex = if (currentStep != null && newElapsed >= currentStep.endTimeSec) {
+            (state.currentStepIndex + 1).coerceAtMost(calc.steps.lastIndex)
+        } else {
+            state.currentStepIndex
+        }
 
-            if (currentStep != null && newElapsed >= currentStep.endTimeSec) {
-                newIndex = (state.currentStepIndex + 1).coerceAtMost(calc.steps.lastIndex)
-                viewModelScope.launch {
-                    _stepTransitions.emit(
-                        StepTransitionEvent(newStepIndex = newIndex, isFinished = false)
-                    )
-                }
-            }
-
-            state.copy(
-                elapsedSeconds = newElapsed,
-                currentStepIndex = newIndex
+        _uiState.update {
+            it.copy(elapsedSeconds = newElapsed, currentStepIndex = newIndex)
+        }
+        if (newIndex != state.currentStepIndex) {
+            _stepTransitions.tryEmit(
+                StepTransitionEvent(newStepIndex = newIndex, isFinished = false)
             )
         }
     }

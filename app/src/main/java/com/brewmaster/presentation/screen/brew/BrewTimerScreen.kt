@@ -9,6 +9,7 @@ import android.os.VibratorManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,14 +31,14 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.brewmaster.domain.model.BrewStep
 import com.brewmaster.domain.model.StepAction
 import com.brewmaster.presentation.component.CircularProgressTimer
 import com.brewmaster.presentation.component.DynamicPhaseIndicator
@@ -58,6 +60,7 @@ import com.brewmaster.presentation.component.PostBrewCoachOverlay
 import com.brewmaster.presentation.component.StopAlertOverlay
 import com.brewmaster.service.BrewTimerService
 import com.brewmaster.presentation.theme.DarkBackground
+import com.brewmaster.presentation.theme.DarkBorder
 import com.brewmaster.presentation.theme.DarkCard
 import com.brewmaster.presentation.theme.LimeGreen
 import com.brewmaster.presentation.theme.TextMuted
@@ -153,15 +156,34 @@ fun BrewTimerScreen(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
+                val step = uiState.currentStep
+                val nextStep = calculation.steps.getOrNull(uiState.currentStepIndex + 1)
                 CircularProgressTimer(
                     elapsedSeconds = uiState.elapsedSeconds,
-                    totalSeconds = calculation.totalBrewTimeSec,
-                    currentStepName = uiState.currentStep?.name ?: ""
+                    stepProgress = uiState.stepProgress,
+                    currentStepName = step?.name ?: "",
+                    footer = when {
+                        uiState.isFinished -> "done"
+                        nextStep != null -> "next: ${nextStep.name} at ${formatClock(step?.endTimeSec ?: 0)}"
+                        else -> "until ${formatClock(calculation.totalBrewTimeSec)}"
+                    }
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
+
+                if (step != null) {
+                    StepHeadline(step = step)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    StatRow(
+                        poured = pouredSoFar(calculation.steps, uiState.currentStepIndex, uiState.stepProgress),
+                        target = step.cumulativeWater,
+                        rate = targetRate(step)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 DynamicPhaseIndicator(
                     steps = calculation.steps,
@@ -169,12 +191,6 @@ fun BrewTimerScreen(
                     elapsedSeconds = uiState.elapsedSeconds,
                     modifier = Modifier.padding(horizontal = 4.dp)
                 )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                uiState.currentStep?.let { step ->
-                    InstructionCard(step = step)
-                }
 
                 Spacer(modifier = Modifier.weight(1f))
 
@@ -263,70 +279,81 @@ private fun TopBar(
 }
 
 @Composable
-private fun InstructionCard(step: com.brewmaster.domain.model.BrewStep) {
-    Card(
+private fun StepHeadline(step: BrewStep) {
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
-        shape = RoundedCornerShape(16.dp)
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = actionIcon(step.action),
-                fontSize = 32.sp
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (step.isWaterStep()) {
+        if (step.isWaterStep()) {
+            Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    text = "ADD ${formatWeight(step.waterAmount)}g",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    ),
-                    color = LimeGreen,
-                    textAlign = TextAlign.Center
+                    text = "ADD ${formatWeight(step.waterAmount)} g",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                    color = TextPrimary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Target total: ${formatWeight(step.cumulativeWater)}g",
+                    text = "→ ${formatWeight(step.cumulativeWater)} g",
                     style = MaterialTheme.typography.titleMedium,
                     color = TextSecondary,
-                    textAlign = TextAlign.Center
+                    modifier = Modifier.padding(bottom = 3.dp)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-            } else {
-                Text(
-                    text = "Current total: ${formatWeight(step.cumulativeWater)}g",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = LimeGreen,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
             }
-
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = step.instruction,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
+        } else {
+            Text(
+                text = step.instruction,
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = TextPrimary,
                 textAlign = TextAlign.Center
             )
-
-            step.tip?.let { tip ->
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = tip,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
-            }
         }
+        step.tip?.let { tip ->
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = tip,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextMuted,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatRow(poured: Double, target: Double, rate: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(DarkCard, RoundedCornerShape(14.dp))
+            .padding(vertical = 12.dp, horizontal = 8.dp)
+    ) {
+        StatCell(label = "POURED", value = "${formatWeight(poured)} g", modifier = Modifier.weight(1f))
+        StatCell(label = "TARGET", value = "${formatWeight(target)} g", modifier = Modifier.weight(1f))
+        StatCell(label = "RATE", value = rate, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun StatCell(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
+            color = TextMuted
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = TextPrimary
+        )
     }
 }
 
@@ -347,113 +374,111 @@ private fun BottomControls(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            FilledIconButton(
-                onClick = onPrevious,
-                modifier = Modifier.size(48.dp),
+            OutlinedButton(
+                onClick = { if (isRunning) onPause() else onResume() },
+                enabled = !isFinished,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
                 shape = CircleShape,
-                enabled = canGoBack,
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = DarkCard,
-                    contentColor = TextSecondary,
-                    disabledContainerColor = DarkCard.copy(alpha = 0.4f),
+                border = BorderStroke(1.5.dp, if (isFinished) DarkBorder else LimeGreen),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = LimeGreen,
                     disabledContentColor = TextMuted
                 )
             ) {
                 Icon(
-                    imageVector = Icons.Default.SkipPrevious,
-                    contentDescription = "Previous step",
-                    modifier = Modifier.size(24.dp)
+                    imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (isRunning) "Pause" else "Resume",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            FilledIconButton(
-                onClick = onReset,
-                modifier = Modifier.size(48.dp),
+            Button(
+                onClick = onSkip,
+                enabled = canSkip,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
                 shape = CircleShape,
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = DarkCard,
-                    contentColor = TextSecondary
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Reset",
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(20.dp))
-
-            FilledIconButton(
-                onClick = {
-                    if (isRunning) onPause() else onResume()
-                },
-                modifier = Modifier.size(72.dp),
-                shape = CircleShape,
-                enabled = !isFinished,
-                colors = IconButtonDefaults.filledIconButtonColors(
+                colors = ButtonDefaults.buttonColors(
                     containerColor = LimeGreen,
                     contentColor = DarkBackground,
                     disabledContainerColor = DarkCard,
                     disabledContentColor = TextMuted
                 )
             ) {
-                Icon(
-                    imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isRunning) "Pause" else "Resume",
-                    modifier = Modifier.size(36.dp)
+                Text(
+                    text = "Next step",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                 )
-            }
-
-            Spacer(modifier = Modifier.width(20.dp))
-
-            FilledIconButton(
-                onClick = onSkip,
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                enabled = canSkip,
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = DarkCard,
-                    contentColor = LimeGreen,
-                    disabledContainerColor = DarkCard.copy(alpha = 0.4f),
-                    disabledContentColor = TextMuted
-                )
-            ) {
+                Spacer(modifier = Modifier.width(6.dp))
                 Icon(
                     imageVector = Icons.Default.SkipNext,
-                    contentDescription = "Skip to next step",
-                    modifier = Modifier.size(24.dp)
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Prev restarts / goes back · Next skips step",
-            style = MaterialTheme.typography.labelSmall,
-            color = TextMuted
-        )
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onPrevious, enabled = canGoBack) {
+                Icon(
+                    imageVector = Icons.Default.SkipPrevious,
+                    contentDescription = null,
+                    tint = if (canGoBack) TextSecondary else TextMuted,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Prev step",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (canGoBack) TextSecondary else TextMuted
+                )
+            }
+            Text(text = "·", color = TextMuted)
+            TextButton(onClick = onReset) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Reset",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary
+                )
+            }
+        }
     }
 }
 
-private fun actionIcon(action: StepAction): String = when (action) {
-    StepAction.BLOOM -> "💧"
-    StepAction.POUR -> "🌊"
-    StepAction.STIR -> "🔄"
-    StepAction.SWIRL -> "🌀"
-    StepAction.WAIT -> "⏳"
-    StepAction.EXCAVATE -> "⛏️"
-    StepAction.PULSE -> "📊"
-    StepAction.OSMOTIC -> "💦"
-    StepAction.IMMERSE -> "🛁"
-    StepAction.RELEASE -> "🔓"
+/** Water already poured, interpolating linearly inside a water step. */
+private fun pouredSoFar(steps: List<BrewStep>, index: Int, stepProgress: Float): Double {
+    val step = steps.getOrNull(index) ?: return 0.0
+    if (!step.isWaterStep()) return step.cumulativeWater
+    val before = step.cumulativeWater - step.waterAmount
+    return before + step.waterAmount * stepProgress.coerceIn(0f, 1f)
 }
+
+private fun targetRate(step: BrewStep): String {
+    if (!step.isWaterStep() || step.durationSec <= 0) return "—"
+    return "%.1f g/s".format(step.waterAmount / step.durationSec)
+}
+
+private fun formatClock(sec: Int): String = "%d:%02d".format(sec / 60, sec % 60)
 
 private fun startTimerService(context: Context, initialStepName: String) {
     val intent = Intent(context, BrewTimerService::class.java).apply {
@@ -482,7 +507,7 @@ private fun stopTimerService(context: Context) {
     context.startService(intent)
 }
 
-private fun com.brewmaster.domain.model.BrewStep.isWaterStep(): Boolean {
+private fun BrewStep.isWaterStep(): Boolean {
     return waterAmount > 0.0 && action in setOf(
         StepAction.BLOOM,
         StepAction.POUR,

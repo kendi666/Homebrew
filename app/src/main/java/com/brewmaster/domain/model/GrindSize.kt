@@ -10,4 +10,10 @@ enum class GrindSize(val label: String, val microns: Int) {
     EXTRA_COARSE("Extra-Coarse", 1400);
 
     override fun toString(): String = label
+
+    companion object {
+        /** B2: never throw on a stale / unknown DB or share-link string. */
+        fun fromStored(value: String): GrindSize =
+            runCatching { valueOf(value) }.getOrDefault(MEDIUM)
+    }
 }
