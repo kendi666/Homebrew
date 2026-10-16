@@ -8,6 +8,7 @@ import com.brewmaster.domain.engine.MattWintonFivePourEngine
 import com.brewmaster.domain.engine.NeoKasuyaTenPourEngine
 import com.brewmaster.domain.engine.OsmoticEngine
 import com.brewmaster.domain.engine.RaoEngine
+import com.brewmaster.domain.engine.SeleneEngine
 import com.brewmaster.domain.engine.SingleCupEngine
 import com.brewmaster.domain.model.BrewCalculation
 import com.brewmaster.domain.model.BrewMode
@@ -66,6 +67,7 @@ class CalculateBrewUseCase @Inject constructor() {
             "hybrid_immersion" -> HybridImmersionEngine()
             "single_cup" -> SingleCupEngine()
             "bypass" -> BypassEngine()
+            "selene" -> SeleneEngine()
             "custom" -> customSteps?.let { com.brewmaster.domain.engine.CustomEngine(it) } ?: SingleCupEngine()
             else -> SingleCupEngine()
         }
@@ -115,10 +117,12 @@ class CalculateBrewUseCase @Inject constructor() {
             if (tempMin > tempMax) tempMin = tempMax
         }
 
-        val totalBrewTimeSec = if (technique.id == "custom" && customSteps != null) {
-            customSteps.sumOf { it.durationSec }
-        } else {
-            technique.totalBrewTimeSec
+        val totalBrewTimeSec = when {
+            technique.id == "custom" && customSteps != null ->
+                customSteps.sumOf { it.durationSec }
+            technique.id == "hario_switch_hybrid" || technique.id == "hybrid_immersion" ->
+                steps.lastOrNull()?.endTimeSec ?: technique.totalBrewTimeSec
+            else -> technique.totalBrewTimeSec
         }
 
         return BrewCalculation(

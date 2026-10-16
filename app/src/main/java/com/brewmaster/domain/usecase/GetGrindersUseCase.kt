@@ -56,7 +56,8 @@ class GetGrindersUseCase @Inject constructor() {
                     "hario_switch_hybrid" to "7.8-8.5 (78-85 clicks), Switch hybrid",
                     "hybrid_immersion" to "7.8-8.5 (78-85 clicks), Switch hybrid",
                     "single_cup" to "7.5-8.5 (75-85 clicks), standard V60",
-                    "bypass" to "8.0-8.6 (80-86 clicks), medium concentrate"
+                    "bypass" to "8.0-8.6 (80-86 clicks), medium concentrate",
+                    "selene" to "8.0-8.6 (80-86 clicks), medium V60"
                 ),
                 sourceNote = "Filter dial 6.5–10.0 only. Below 6.5 is espresso/moka — not shown here."
             ),
@@ -88,7 +89,8 @@ class GetGrindersUseCase @Inject constructor() {
                     "hario_switch_hybrid" to "7.8-8.5 (78-85 clicks), Switch hybrid",
                     "hybrid_immersion" to "7.8-8.5 (78-85 clicks), Switch hybrid",
                     "single_cup" to "7.5-8.5 (75-85 clicks), standard V60",
-                    "bypass" to "8.0-8.5 (80-85 clicks), medium concentrate"
+                    "bypass" to "8.0-8.5 (80-85 clicks), medium concentrate",
+                    "selene" to "8.0-8.5 (80-85 clicks), medium V60"
                 ),
                 sourceNote = "Filter dial 6.5–10.0 only. Below 6.5 is espresso/moka — not shown here."
             ),

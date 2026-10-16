@@ -86,13 +86,13 @@ class GetTechniquesUseCase @Inject constructor() {
                 id = "hario_switch_hybrid",
                 name = "Hario Switch Hybrid",
                 author = "Hario Switch",
-                focus = "Body & Clarity",
-                description = "Hybrid Switch recipe: hot percolation phase, optional cooler immersion finish for sweetness",
-                defaultRatio = 16.67,
-                defaultGrind = GrindSize.MEDIUM,
-                defaultTempMin = 90,
-                defaultTempMax = 95,
-                totalBrewTimeSec = 225
+                focus = "Sweetness",
+                description = "Bloom 3× dose, 40s closed steep, then two open pours. Longer ratios add water only after the switch opens",
+                defaultRatio = 14.5,
+                defaultGrind = GrindSize.MEDIUM_FINE,
+                defaultTempMin = 93,
+                defaultTempMax = 93,
+                totalBrewTimeSec = 160
             ),
             BrewTechnique(
                 id = "single_cup",
@@ -105,6 +105,18 @@ class GetTechniquesUseCase @Inject constructor() {
                 defaultTempMin = 95,
                 defaultTempMax = 100,
                 totalBrewTimeSec = 180
+            ),
+            BrewTechnique(
+                id = "selene",
+                name = "Selene",
+                author = "Selene",
+                focus = "Clarity & Sweetness",
+                description = "10 g / 190 g card: 30 g bloom for 1 minute, 80 g, then 40 g + 40 g, each after the bed dries. Finish 3:30–3:45",
+                defaultRatio = 19.0,
+                defaultGrind = GrindSize.MEDIUM,
+                defaultTempMin = 91,
+                defaultTempMax = 92,
+                totalBrewTimeSec = 225
             ),
             BrewTechnique(
                 id = "bypass",

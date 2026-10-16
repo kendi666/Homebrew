@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Selene** — card recipe at 1:19, 91–92°C, medium. On 10 g / 190 g: bloom 30 g
+  for 1 minute, pour to 110 g and wait until the bed dries, then 40 g + 40 g the
+  same way. Finish 3:30–3:45. Other doses keep that 30/80/40/40 split.
+
 ### Changed
+- **Hario Switch Hybrid** — short sweet immersion: bloom 3× dose, valve closed
+  until 1:20 at ~7.3× dose (110 g on 15 g, same as half the kettle at 1:14.5),
+  then two open pours. Default 1:14.5, 93°C, medium-fine, finish 2:40. At 1:17
+  and 1:18 the extra water goes into the open pours and drawdown gains 10s per
+  ratio point above 15 (3:00 and 3:10).
 - **App icon** — launcher uses the Homebrew dripper + carafe mark (paper
   background, wordmark kept inside the adaptive-icon safe zone).
 - **Brew timer redesign** — ring now shows progress of the current step while the
