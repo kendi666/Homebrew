@@ -53,7 +53,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.brewmaster.domain.model.BrewStep
-import com.brewmaster.domain.model.StepAction
 import com.brewmaster.presentation.component.CircularProgressTimer
 import com.brewmaster.presentation.component.DynamicPhaseIndicator
 import com.brewmaster.presentation.component.PostBrewCoachOverlay
@@ -284,7 +283,7 @@ private fun StepHeadline(step: BrewStep) {
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (step.isWaterStep()) {
+        if (step.isPour) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = "ADD ${formatWeight(step.waterAmount)} g",
@@ -468,13 +467,13 @@ private fun BottomControls(
 /** Water already poured, interpolating linearly inside a water step. */
 private fun pouredSoFar(steps: List<BrewStep>, index: Int, stepProgress: Float): Double {
     val step = steps.getOrNull(index) ?: return 0.0
-    if (!step.isWaterStep()) return step.cumulativeWater
+    if (!step.isPour) return step.cumulativeWater
     val before = step.cumulativeWater - step.waterAmount
     return before + step.waterAmount * stepProgress.coerceIn(0f, 1f)
 }
 
 private fun targetRate(step: BrewStep): String {
-    if (!step.isWaterStep() || step.durationSec <= 0) return "—"
+    if (!step.isPour || step.durationSec <= 0) return "—"
     return "%.1f g/s".format(step.waterAmount / step.durationSec)
 }
 
@@ -505,16 +504,6 @@ private fun stopTimerService(context: Context) {
         action = BrewTimerService.ACTION_STOP
     }
     context.startService(intent)
-}
-
-private fun BrewStep.isWaterStep(): Boolean {
-    return waterAmount > 0.0 && action in setOf(
-        StepAction.BLOOM,
-        StepAction.POUR,
-        StepAction.PULSE,
-        StepAction.OSMOTIC,
-        StepAction.IMMERSE
-    )
 }
 
 private fun formatWeight(weight: Double): String =

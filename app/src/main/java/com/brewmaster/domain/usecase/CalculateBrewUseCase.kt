@@ -1,6 +1,7 @@
 package com.brewmaster.domain.usecase
 
 import com.brewmaster.domain.engine.BypassEngine
+import com.brewmaster.domain.engine.GeorgePengEngine
 import com.brewmaster.domain.engine.HoffmannEngine
 import com.brewmaster.domain.engine.HybridImmersionEngine
 import com.brewmaster.domain.engine.KasuyaEngine
@@ -68,6 +69,7 @@ class CalculateBrewUseCase @Inject constructor() {
             "single_cup" -> SingleCupEngine()
             "bypass" -> BypassEngine()
             "selene" -> SeleneEngine()
+            "george_peng_2025" -> GeorgePengEngine()
             "custom" -> customSteps?.let { com.brewmaster.domain.engine.CustomEngine(it) } ?: SingleCupEngine()
             else -> SingleCupEngine()
         }

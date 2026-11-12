@@ -107,6 +107,18 @@ class GetTechniquesUseCase @Inject constructor() {
                 totalBrewTimeSec = 180
             ),
             BrewTechnique(
+                id = "george_peng_2025",
+                name = "George Peng 2025",
+                author = "George Jinyang Peng",
+                focus = "Floral Clarity",
+                description = "2025 Brewers Cup. 15 g / 210 g: 30 g bloom in 6s, wait 24s, 90 g at 96°C in 10s, wait 30s, 90 g at 80°C with a Melodrip, wait 25s",
+                defaultRatio = 14.0,
+                defaultGrind = GrindSize.MEDIUM_FINE,
+                defaultTempMin = 96,
+                defaultTempMax = 96,
+                totalBrewTimeSec = 135
+            ),
+            BrewTechnique(
                 id = "selene",
                 name = "Selene",
                 author = "Selene",

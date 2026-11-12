@@ -13,4 +13,14 @@ data class BrewStep(
     val tip: String? = null
 ) {
     val durationSec: Int get() = endTimeSec - startTimeSec
+
+    /** Water is going in. Waits and drawdowns stay false so the timer can show a gap. */
+    val isPour: Boolean
+        get() = waterAmount > 0.0 && action in setOf(
+            StepAction.BLOOM,
+            StepAction.POUR,
+            StepAction.PULSE,
+            StepAction.OSMOTIC,
+            StepAction.IMMERSE
+        )
 }

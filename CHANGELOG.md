@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Pour timeline** — the brew timer paints a block only while water is going in.
+  Gaps are waits and drawdown, with a playhead on the current second.
+- **George Peng 2025** — Brewers Cup recipe at 1:14, 96°C, medium-fine. On 15 g /
+  210 g: bloom 30 g in 6s, wait 24s, circle-pour to 120 g in 10s, wait 30s,
+  Melodrip the rest at 80°C, wait 25s. Finish 2:15. Other doses keep 30/90/90.
 - **Selene** — card recipe at 1:19, 91–92°C, medium. On 10 g / 190 g: bloom 30 g
   for 1 minute, pour to 110 g and wait until the bed dries, then 40 g + 40 g the
   same way. Finish 3:30–3:45. Other doses keep that 30/80/40/40 split.
