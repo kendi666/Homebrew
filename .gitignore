@@ -8,5 +8,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+keystore.properties
+*.jks
+*.keystore
 /app/build
 /ui_design_pages
