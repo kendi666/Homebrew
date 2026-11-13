@@ -104,7 +104,7 @@ fun DashboardScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "BrewMaster",
+                text = "Homebrew",
                 style = MaterialTheme.typography.displayMedium,
                 color = LimeGreen,
                 fontWeight = FontWeight.Bold
@@ -188,6 +188,17 @@ fun DashboardScreen(
             )
         }
 
+        state.customWarning?.let { warning ->
+            if (state.selectedTechnique?.id == "custom") {
+                Text(
+                    text = warning,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+
         // --- Target Profile ---
         Spacer(Modifier.height(24.dp))
         SectionLabel("TARGET PROFILE")
@@ -200,9 +211,9 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp)
         )
 
-        // --- Jenis Kopi ---
+        // --- Coffee Bean ---
         Spacer(Modifier.height(24.dp))
-        SectionLabel("JENIS KOPI")
+        SectionLabel("COFFEE BEAN")
         Spacer(Modifier.height(8.dp))
         CoffeeBeanPickerCard(
             selectedBean = state.selectedBean,
@@ -237,6 +248,33 @@ fun DashboardScreen(
                 onValueChange = viewModel::onRatioChanged,
                 prefix = "1:",
                 modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // --- Brew Mode ---
+        SectionLabel("BREW MODE")
+        Spacer(Modifier.height(8.dp))
+        BrewModeToggle(
+            mode = state.brewMode,
+            onToggle = viewModel::onBrewModeToggled,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+
+        AnimatedVisibility(
+            visible = state.brewMode == BrewMode.ICE,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            ParameterCard(
+                label = "Ice Weight (default 40% of total)",
+                value = state.iceWeight,
+                onValueChange = viewModel::onIceWeightChanged,
+                suffix = "g",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp)
             )
         }
 
@@ -278,33 +316,6 @@ fun DashboardScreen(
                 suggestions = state.suggestions,
                 selectedTechniqueId = state.selectedTechnique?.id,
                 onSelect = viewModel::onSuggestionSelected
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // --- Brew Mode ---
-        SectionLabel("BREW MODE")
-        Spacer(Modifier.height(8.dp))
-        BrewModeToggle(
-            mode = state.brewMode,
-            onToggle = viewModel::onBrewModeToggled,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-
-        AnimatedVisibility(
-            visible = state.brewMode == BrewMode.ICE,
-            enter = expandVertically() + fadeIn(),
-            exit = shrinkVertically() + fadeOut()
-        ) {
-            ParameterCard(
-                label = "Ice Weight (default 40% of total)",
-                value = state.iceWeight,
-                onValueChange = viewModel::onIceWeightChanged,
-                suffix = "g",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 12.dp)
             )
         }
 

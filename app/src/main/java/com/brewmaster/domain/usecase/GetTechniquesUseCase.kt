@@ -95,6 +95,30 @@ class GetTechniquesUseCase @Inject constructor() {
                 totalBrewTimeSec = 160
             ),
             BrewTechnique(
+                id = "ryan_wibawa",
+                name = "Ryan Wibawa",
+                author = "Ryan Wibawa",
+                focus = "Double Immersion",
+                description = "15 g / 220 g on a Switch. Closed bloom 100 g at 86°C, open 5 s, closed pour to 220 g at 92°C in 20 s, then open to 2:00",
+                defaultRatio = 220.0 / 15.0,
+                defaultGrind = GrindSize.MEDIUM,
+                defaultTempMin = 86,
+                defaultTempMax = 92,
+                totalBrewTimeSec = 120
+            ),
+            BrewTechnique(
+                id = "kasuya_devils",
+                name = "Devil's Recipe",
+                author = "Tetsu Kasuya",
+                focus = "Cool Immersion",
+                description = "20 g / 300 g on a Switch. Closed bloom 50 g at 92°C, open pours to 200 g, closed pour to 300 g at 70°C, open to 3:30. Comandante 28 clicks",
+                defaultRatio = 15.0,
+                defaultGrind = GrindSize.MEDIUM,
+                defaultTempMin = 92,
+                defaultTempMax = 92,
+                totalBrewTimeSec = 210
+            ),
+            BrewTechnique(
                 id = "single_cup",
                 name = "Single Cup",
                 author = "Classic",

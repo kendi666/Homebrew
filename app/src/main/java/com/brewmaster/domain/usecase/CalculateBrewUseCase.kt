@@ -70,6 +70,8 @@ class CalculateBrewUseCase @Inject constructor() {
             "bypass" -> BypassEngine()
             "selene" -> SeleneEngine()
             "george_peng_2025" -> GeorgePengEngine()
+            "ryan_wibawa" -> com.brewmaster.domain.engine.RyanWibawaEngine()
+            "kasuya_devils" -> com.brewmaster.domain.engine.KasuyaDevilsEngine()
             "custom" -> customSteps?.let { com.brewmaster.domain.engine.CustomEngine(it) } ?: SingleCupEngine()
             else -> SingleCupEngine()
         }

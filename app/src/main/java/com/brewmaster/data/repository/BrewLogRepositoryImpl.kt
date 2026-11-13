@@ -40,7 +40,10 @@ class BrewLogRepositoryImpl @Inject constructor(
             tempUsed = tempUsed,
             rating = rating,
             notes = notes,
-            createdAt = createdAt
+            createdAt = createdAt,
+            grinderName = grinderName,
+            grinderSetting = grinderSetting,
+            brewTimeSec = brewTimeSec
         )
     }
 
@@ -57,7 +60,10 @@ class BrewLogRepositoryImpl @Inject constructor(
             tempUsed = tempUsed,
             rating = rating,
             notes = notes,
-            createdAt = createdAt
+            createdAt = createdAt,
+            grinderName = grinderName,
+            grinderSetting = grinderSetting,
+            brewTimeSec = brewTimeSec
         )
     }
 }

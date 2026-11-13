@@ -36,7 +36,9 @@ object DatabaseModule {
                 BrewMasterDatabase.MIGRATION_3_4,
                 BrewMasterDatabase.MIGRATION_4_5,
                 BrewMasterDatabase.MIGRATION_5_6,
-                BrewMasterDatabase.MIGRATION_6_7
+                BrewMasterDatabase.MIGRATION_6_7,
+                BrewMasterDatabase.MIGRATION_7_8,
+                BrewMasterDatabase.MIGRATION_8_9
             )
             .addCallback(BrewMasterDatabase.prepopulateCallback(scope) { instance!! })
             .build()

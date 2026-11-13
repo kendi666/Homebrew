@@ -7,8 +7,8 @@ import kotlin.math.roundToInt
 /**
  * Tetsu Kasuya V60 Neo 10-pour method.
  *
- * Uses very coarse grounds and high temperature. The repeated small pulses build
- * sweetness and syrupy body without pushing bitterness too far.
+ * Uses very coarse grounds and high temperature. Each pulse is a quick dump;
+ * the rest of the interval is a wait so the bed can drain.
  */
 class NeoKasuyaTenPourEngine : BrewEngine {
 
@@ -28,48 +28,46 @@ class NeoKasuyaTenPourEngine : BrewEngine {
             val amount = if (isFinalPour) (total - pourSize * (POUR_COUNT - 1)).coerceAtLeast(0.0) else pourSize
             val duration = if (order == 1) 30 else 15
             val endTime = currentTime + duration
+            val pourSec = kettlePourSec(amount, duration, RAPID_G_PER_SEC)
 
-            steps.add(
-                BrewStep(
-                    order = order,
-                    name = if (order == 1) "Bloom Pour" else if (isFinalPour) "Final Pour 10" else "Pour $order",
-                    action = if (order == 1) StepAction.BLOOM else StepAction.PULSE,
-                    waterPercentage = amount / total,
-                    waterAmount = amount,
-                    cumulativeWater = cumulative,
-                    startTimeSec = currentTime,
-                    endTimeSec = endTime,
-                    instruction = if (order == 1) {
-                        "Rapidly pour ${amount.roundToInt()}g for bloom, then wait 30s"
-                    } else {
-                        "Rapidly add ${amount.roundToInt()}g, up to ${cumulative.roundToInt()}g total"
-                    },
-                    tip = when (order) {
-                        1 -> "Use very coarse grind and 95-96°C water"
-                        POUR_COUNT -> "Let drawdown finish around 3:00-3:30, then swirl the server"
-                        else -> null
-                    }
-                )
+            steps += timedPour(
+                name = if (order == 1) "Bloom Pour" else if (isFinalPour) "Final Pour 10" else "Pour $order",
+                action = if (order == 1) StepAction.BLOOM else StepAction.PULSE,
+                amount = amount,
+                cumulative = cumulative,
+                total = total,
+                startSec = currentTime,
+                endSec = endTime,
+                pourSec = pourSec,
+                pourInstruction = if (order == 1) {
+                    "Rapidly pour ${amount.roundToInt()}g in ${pourSec}s"
+                } else {
+                    "Rapidly add ${amount.roundToInt()}g in ${pourSec}s, up to ${cumulative.roundToInt()}g"
+                },
+                waitInstruction = "Wait until ${phaseClock(endTime)}",
+                pourTip = when (order) {
+                    1 -> "Use very coarse grind and 95-96°C water"
+                    POUR_COUNT -> "Let drawdown finish around 3:00-3:30, then swirl the server"
+                    else -> null
+                },
             )
             currentTime = endTime
         }
 
-        steps.add(
-            BrewStep(
-                order = POUR_COUNT + 1,
-                name = "Drawdown",
-                action = StepAction.WAIT,
-                waterPercentage = 0.0,
-                waterAmount = 0.0,
-                cumulativeWater = total,
-                startTimeSec = currentTime,
-                endTimeSec = 210,
-                instruction = "Allow the water to fully draw down",
-                tip = "Swirl the server gently before serving to integrate the layers"
-            )
+        steps += BrewStep(
+            order = 0,
+            name = "Drawdown",
+            action = StepAction.WAIT,
+            waterPercentage = 0.0,
+            waterAmount = 0.0,
+            cumulativeWater = total,
+            startTimeSec = currentTime,
+            endTimeSec = 210,
+            instruction = "Allow the water to fully draw down",
+            tip = "Swirl the server gently before serving to integrate the layers"
         )
 
-        return steps
+        return steps.withOrders()
     }
 
     private companion object {

@@ -1,5 +1,8 @@
 package com.brewmaster.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class BrewStep(
     val order: Int,
     val name: String,
@@ -23,4 +26,8 @@ data class BrewStep(
             StepAction.OSMOTIC,
             StepAction.IMMERSE
         )
+
+    /** Switch valve is open. Painted separately from a pour. */
+    val isValveOpen: Boolean
+        get() = action == StepAction.RELEASE
 }

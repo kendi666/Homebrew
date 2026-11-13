@@ -195,6 +195,7 @@ private fun CustomStepDialog(
     var duration by remember { mutableStateOf(initialStep.durationSec.toString()) }
     var percentage by remember { mutableStateOf((initialStep.waterPercentage * 100).toInt().toString()) }
     var actionDropdownExpanded by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -242,13 +243,23 @@ private fun CustomStepDialog(
                     label = { Text("Water Percentage (0-100)") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                error?.let { message ->
+                    Spacer(Modifier.height(8.dp))
+                    Text(text = message, color = MaterialTheme.colorScheme.error)
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = {
-                val dur = duration.toIntOrNull() ?: 30
-                val perc = (percentage.toDoubleOrNull() ?: 20.0) / 100.0
-                onSave(CustomStepConfig(action, dur, perc))
+                val dur = duration.trim().toIntOrNull()
+                val perc = percentage.trim().replace(',', '.').toDoubleOrNull()
+                error = when {
+                    dur == null || dur < 1 -> "Enter a duration of at least 1 second."
+                    perc == null || perc < 0.0 || perc > 100.0 -> "Enter a water percentage from 0 to 100. Use 12.5 or 12,5."
+                    else -> null
+                }
+                if (error != null || dur == null || perc == null) return@TextButton
+                onSave(CustomStepConfig(action, dur, perc / 100.0))
             }) {
                 Text("Save", color = LimeGreen)
             }

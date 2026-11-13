@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
         CoffeeBeanEntity::class,
         BrewLogEntity::class
     ],
-    version = 7,
+    version = 9,
     exportSchema = true
 )
 abstract class BrewMasterDatabase : RoomDatabase() {
@@ -140,19 +140,38 @@ abstract class BrewMasterDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE personal_recipes ADD COLUMN grinder_id TEXT")
+                db.execSQL("ALTER TABLE personal_recipes ADD COLUMN target_profile TEXT")
+                db.execSQL("ALTER TABLE personal_recipes ADD COLUMN custom_steps TEXT")
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE brew_logs ADD COLUMN grinder_name TEXT")
+                db.execSQL("ALTER TABLE brew_logs ADD COLUMN grinder_setting TEXT")
+                db.execSQL("ALTER TABLE brew_logs ADD COLUMN brew_time_sec INTEGER")
+            }
+        }
+
         fun prepopulateCallback(scope: CoroutineScope, provider: () -> BrewMasterDatabase): Callback {
             return object : Callback() {
+                // Sample beans go in once, when the database is first made.
+                // Seeding on every open brought them back after the user deleted them all.
+                override fun onCreate(db: SupportSQLiteDatabase) {
+                    super.onCreate(db)
+                    scope.launch {
+                        provider().coffeeBeanDao().insertAll(PREPOPULATED_BEANS)
+                    }
+                }
+
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     super.onOpen(db)
                     scope.launch {
-                        val database = provider()
-                        val processDao = database.coffeeProcessDao()
-                        val beanDao = database.coffeeBeanDao()
                         // REPLACE keeps system process presets (temps/grind/ratio) in sync
-                        processDao.insertAll(PREPOPULATED_PROCESSES)
-                        if (beanDao.getCount() == 0) {
-                            beanDao.insertAll(PREPOPULATED_BEANS)
-                        }
+                        provider().coffeeProcessDao().insertAll(PREPOPULATED_PROCESSES)
                     }
                 }
             }

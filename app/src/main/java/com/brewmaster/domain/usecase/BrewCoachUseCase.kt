@@ -35,8 +35,16 @@ class BrewCoachUseCase @Inject constructor() {
             else -> null
         }
 
-        val chosen = symptom ?: fromTime ?: BrewSymptom.FLAT
-        // One variable: first fix is the primary lever
+        val chosen = symptom ?: fromTime
+        if (chosen == null) {
+            return BrewCoachAdvice(
+                diagnosis = "No taste selected.",
+                primaryFix = "Pick how it tasted before changing grind or temperature.",
+                secondaryFixes = emptyList(),
+                timeNote = timeNote,
+                suggestedSymptom = null
+            )
+        }
         val primary = chosen.fixes.firstOrNull()
             ?: "Change one variable next cup — usually grind ±1–2 clicks."
 

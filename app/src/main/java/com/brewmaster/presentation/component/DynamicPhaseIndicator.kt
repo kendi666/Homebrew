@@ -23,13 +23,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.brewmaster.domain.model.BrewStep
 import com.brewmaster.presentation.theme.DarkBorder
+import com.brewmaster.presentation.theme.HotOrange
 import com.brewmaster.presentation.theme.IceBlue
 import com.brewmaster.presentation.theme.TextMuted
 import com.brewmaster.presentation.theme.TextSecondary
 
 /**
- * Pour blocks sit on a timeline. Gaps are waits and drawdown, same idea as a
- * recipe chart that only paints the seconds you are actually pouring.
+ * Blue blocks are pours. Orange blocks are the switch valve opening.
+ * Gaps are closed waits and drawdown.
  */
 @Composable
 fun DynamicPhaseIndicator(
@@ -61,18 +62,18 @@ fun DynamicPhaseIndicator(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 steps.forEachIndexed { index, step ->
-                    val weight = step.durationSec.toFloat() / totalDuration
-                    val pour = step.isPour
+                    val marked = step.isPour || step.isValveOpen
+                    val base = if (step.isValveOpen) HotOrange else IceBlue
                     val color = when {
-                        !pour -> androidx.compose.ui.graphics.Color.Transparent
-                        index < currentStepIndex -> IceBlue.copy(alpha = 0.45f)
-                        index == currentStepIndex -> IceBlue
-                        else -> IceBlue.copy(alpha = 0.28f)
+                        !marked -> androidx.compose.ui.graphics.Color.Transparent
+                        index < currentStepIndex -> base.copy(alpha = 0.45f)
+                        index == currentStepIndex -> base
+                        else -> base.copy(alpha = 0.28f)
                     }
                     Box(
                         modifier = Modifier
-                            .weight(weight.coerceAtLeast(0.04f))
-                            .height(if (pour) 22.dp else 28.dp)
+                            .weight(step.durationSec.toFloat().coerceAtLeast(0.001f))
+                            .height(if (marked) 22.dp else 28.dp)
                             .clip(RoundedCornerShape(3.dp))
                             .background(color)
                     )
@@ -97,31 +98,43 @@ fun DynamicPhaseIndicator(
         Spacer(modifier = Modifier.height(6.dp))
 
         Row(modifier = Modifier.fillMaxWidth()) {
-            steps.forEachIndexed { index, step ->
-                val weight = step.durationSec.toFloat() / totalDuration
+            var index = 0
+            while (index < steps.size) {
+                val step = steps[index]
+                val marked = step.isPour || step.isValveOpen
+                if (!marked) {
+                    Box(modifier = Modifier.weight(step.durationSec.toFloat().coerceAtLeast(0.001f)))
+                    index++
+                    continue
+                }
+                var span = step.durationSec
+                var end = index + 1
+                while (end < steps.size && !steps[end].isPour && !steps[end].isValveOpen) {
+                    span += steps[end].durationSec
+                    end++
+                }
+                val inPhase = currentStepIndex in index until end
+                val active = if (step.isValveOpen) HotOrange else IceBlue
                 val labelColor = when {
+                    inPhase -> active
                     index < currentStepIndex -> TextSecondary
-                    index == currentStepIndex -> IceBlue
                     else -> TextMuted
                 }
                 Box(
-                    modifier = Modifier.weight(weight.coerceAtLeast(0.04f)),
-                    contentAlignment = Alignment.Center
+                    modifier = Modifier.weight(span.toFloat().coerceAtLeast(0.001f)),
+                    contentAlignment = Alignment.CenterStart
                 ) {
                     Text(
-                        text = when {
-                            step.isPour -> "${step.cumulativeWater.toInt()}g"
-                            index == currentStepIndex -> "wait"
-                            else -> ""
-                        },
+                        text = if (step.isValveOpen) "open" else "${step.cumulativeWater.toInt()}g",
                         style = MaterialTheme.typography.labelSmall,
                         color = labelColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 1.dp)
+                        textAlign = TextAlign.Start,
+                        modifier = Modifier.padding(end = 2.dp)
                     )
                 }
+                index = end
             }
         }
     }

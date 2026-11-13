@@ -17,5 +17,8 @@ data class BrewLogEntity(
     @ColumnInfo(name = "temp_used") val tempUsed: Int?,
     @ColumnInfo(name = "rating") val rating: Int,
     @ColumnInfo(name = "notes") val notes: String?,
-    @ColumnInfo(name = "created_at") val createdAt: Long
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    @ColumnInfo(name = "grinder_name") val grinderName: String? = null,
+    @ColumnInfo(name = "grinder_setting") val grinderSetting: String? = null,
+    @ColumnInfo(name = "brew_time_sec") val brewTimeSec: Int? = null
 )

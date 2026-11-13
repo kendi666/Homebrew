@@ -27,17 +27,19 @@ enum class TargetProfile(
     MORE_ACIDITY(
         label = "More Acidity",
         icon = "bolt",
-        description = "Brighter, more vibrant acidity",
-        tempOffset = 2,
+        // Pulls a little less: acidity comes through when the cup is not pushed to full extraction.
+        description = "Brighter cup: a touch coarser and cooler, a bit more water",
+        tempOffset = -1,
         ratioOffset = 0.5,
-        grindShift = -1
+        grindShift = 1
     ),
     MORE_BODY(
         label = "More Body",
         icon = "fitness_center",
-        description = "Heavier mouthfeel, richer texture",
-        tempOffset = -2,
+        // Body follows strength and fines: less water and a finer grind, same temperature.
+        description = "Heavier mouthfeel: stronger ratio and a finer grind",
+        tempOffset = 0,
         ratioOffset = -1.0,
-        grindShift = 1
+        grindShift = -1
     )
 }

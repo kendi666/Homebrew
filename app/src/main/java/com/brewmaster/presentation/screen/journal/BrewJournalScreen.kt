@@ -238,7 +238,9 @@ private fun BrewLogCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "$techniqueLabel · ${log.coffeeWeight}g · 1:${formatRatio(log.ratio)} · ${log.grindSize.label}" +
-                    if (log.isIce) " · Iced" else "",
+                    (if (log.isIce) " · Iced" else "") +
+                    log.grinderSetting?.let { dial -> " · ${log.grinderName?.let { "$it " }.orEmpty()}$dial" }.orEmpty() +
+                    log.brewTimeSec?.let { sec -> " · %d:%02d".format(sec / 60, sec % 60) }.orEmpty(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )

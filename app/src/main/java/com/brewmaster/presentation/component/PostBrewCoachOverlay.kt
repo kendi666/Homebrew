@@ -42,9 +42,11 @@ fun PostBrewCoachOverlay(
     elapsedSec: Int,
     targetSec: Int,
     adviceFor: (BrewSymptom?) -> BrewCoachAdvice,
-    onDone: () -> Unit
+    /** [rating] is 1–5 when the cup should go to the journal, else null. */
+    onDone: (rating: Int?, symptom: BrewSymptom?) -> Unit
 ) {
     var selected by remember { mutableStateOf<BrewSymptom?>(null) }
+    var rating by remember { mutableStateOf<Int?>(null) }
     val advice = remember(selected, elapsedSec, targetSec) { adviceFor(selected) }
 
     Box(
@@ -140,10 +142,30 @@ fun PostBrewCoachOverlay(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "Rate it to save this brew to the journal",
+                style = MaterialTheme.typography.labelMedium,
+                color = TextSecondary
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                (1..5).forEach { star ->
+                    Text(
+                        text = if ((rating ?: 0) >= star) "★" else "☆",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = if ((rating ?: 0) >= star) LimeGreen else TextSecondary,
+                        modifier = Modifier
+                            .clickable { rating = if (rating == star) null else star }
+                            .padding(6.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = onDone,
+                onClick = { onDone(rating, selected) },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = LimeGreen,
                     contentColor = DarkBackground
@@ -153,16 +175,17 @@ fun PostBrewCoachOverlay(
                     .fillMaxWidth(0.7f)
                     .height(52.dp)
             ) {
-                Text("DONE", fontWeight = FontWeight.Bold)
+                Text(if (rating != null) "SAVE & DONE" else "DONE", fontWeight = FontWeight.Bold)
             }
 
             Text(
-                text = "Skip taste → still get time-based tip above",
+                text = "Skip without saving",
                 style = MaterialTheme.typography.labelSmall,
                 color = TextSecondary,
                 modifier = Modifier
                     .padding(top = 12.dp)
-                    .clickable(onClick = onDone)
+                    .clickable { onDone(null, null) }
+                    .padding(8.dp)
             )
         }
     }

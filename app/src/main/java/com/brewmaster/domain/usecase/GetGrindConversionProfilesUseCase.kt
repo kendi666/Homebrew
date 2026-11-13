@@ -4,15 +4,18 @@ import com.brewmaster.domain.model.GrindConversionProfile
 import javax.inject.Inject
 
 /**
- * Dial ↔ dial conversion via one estimated-particle micron bridge.
+ * Dial ↔ dial conversion via one shared bridge unit, M.
+ * M is not a measured particle size.
  *
  *   M = 75 * FM120 + 50
  *   Sculptor = 0.5 * FM120 + 2      →  M = 150 * SC − 250
  *   K-Ultra  = M/100 − 0.5          →  M = 100 * D_K + 50
+ *   C40      = 30 * clicks          →  28 clicks = 840
+ *   ZP6      = pour-over center 4.3 → 900, French press center 5.5 → 1000
  *   Guerrero = (M − 150) / 11       →  M = 11 * D_G + 150
  *
  * C3 / C5 / JX-S share the same M (intercept 50) with typical brew-window fits.
- * µm is estimated particle size, not burr-gap travel (K-Ultra 20 µm/click).
+ * K-Ultra 20 µm/click and ZP6 22 µm/click are burr travel, not this M.
  */
 class GetGrindConversionProfilesUseCase @Inject constructor() {
 
@@ -43,6 +46,31 @@ class GetGrindConversionProfilesUseCase @Inject constructor() {
                 dialStep = 0.1,
                 note = "D = M/100 − 0.5 (not factory 20 µm/click gap)",
                 calibrated = true
+            ),
+            GrindConversionProfile(
+                id = "comandante_c40",
+                name = "Comandante C40",
+                brand = "Comandante",
+                slope = 30.0,
+                intercept = 0.0,
+                dialMin = 0.0,
+                dialMax = 40.0,
+                dialStep = 1.0,
+                unitLabel = "clicks",
+                note = "Bridge: 30 per click. 28 clicks = 840. Not a measured particle size.",
+                calibrated = true
+            ),
+            GrindConversionProfile(
+                id = "1zpresso_zp6",
+                name = "ZP6 Special",
+                brand = "1Zpresso",
+                slope = 250.0 / 3.0,
+                intercept = 1625.0 / 3.0,
+                dialMin = 0.0,
+                dialMax = 9.0,
+                dialStep = 0.1,
+                note = "Factory chart: pour-over ~4.0–4.6, French press ~5.0–6.0, lined up with K-Ultra 8.5 and 9.5. Not the 22 µm burr step.",
+                calibrated = false
             ),
             GrindConversionProfile(
                 id = "guerrero_gr64",

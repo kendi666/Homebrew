@@ -12,5 +12,9 @@ data class BrewLog(
     val tempUsed: Int? = null,
     val rating: Int,            // 1..5
     val notes: String? = null,
-    val createdAt: Long
+    val createdAt: Long,
+    val grinderName: String? = null,
+    val grinderSetting: String? = null,
+    /** Clock time when Drawdown done was tapped. */
+    val brewTimeSec: Int? = null
 )

@@ -19,5 +19,9 @@ data class PersonalRecipeEntity(
     @ColumnInfo(name = "created_at") val createdAt: Long,
     @ColumnInfo(name = "grinder_setting") val grinderSetting: String? = null,
     @ColumnInfo(name = "temp_min") val tempMin: Int? = null,
-    @ColumnInfo(name = "temp_max") val tempMax: Int? = null
+    @ColumnInfo(name = "temp_max") val tempMax: Int? = null,
+    @ColumnInfo(name = "grinder_id") val grinderId: String? = null,
+    @ColumnInfo(name = "target_profile") val targetProfile: String? = null,
+    /** JSON list of custom steps, only for the custom technique. */
+    @ColumnInfo(name = "custom_steps") val customSteps: String? = null
 )

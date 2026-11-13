@@ -44,7 +44,7 @@ fun StopAlertOverlay(
             modifier = Modifier.padding(32.dp)
         ) {
             Text(
-                text = "SIAP!",
+                text = "DONE",
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontSize = 72.sp,
                     fontWeight = FontWeight.Black,
@@ -56,7 +56,7 @@ fun StopAlertOverlay(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "ANGKAT V60",
+                text = "REMOVE THE DRIPPER",
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 2.sp
@@ -67,7 +67,7 @@ fun StopAlertOverlay(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Penyeduhan selesai pada target volume ${totalVolume.toInt()}ml",
+                text = "Brew finished. The scale should read about ${totalVolume.toInt()} g.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = TextSecondary,
                 textAlign = TextAlign.Center
@@ -87,7 +87,7 @@ fun StopAlertOverlay(
                     .height(56.dp)
             ) {
                 Text(
-                    text = "SELESAI",
+                    text = "NEXT",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 2.sp

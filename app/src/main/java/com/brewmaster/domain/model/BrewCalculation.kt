@@ -1,5 +1,8 @@
 package com.brewmaster.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class BrewCalculation(
     val technique: BrewTechnique,
     val coffeeWeight: Double,
@@ -13,5 +16,9 @@ data class BrewCalculation(
     val totalBrewTimeSec: Int,
     val processNote: String? = null,
     val targetProfile: TargetProfile = TargetProfile.BALANCED,
-    val beanName: String? = null
+    val beanName: String? = null,
+    /** Filled by the dashboard so a journal entry can say what was brewed. */
+    val processId: Int = 0,
+    val grinderName: String? = null,
+    val grinderSetting: String? = null
 )

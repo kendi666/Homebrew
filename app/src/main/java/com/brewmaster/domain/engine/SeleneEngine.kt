@@ -7,7 +7,8 @@ import kotlin.math.roundToInt
 /**
  * Selene — card recipe written for 10 g / 190 g (1:19), 91–92°C, medium.
  * Pours scale with the kettle so another dose keeps the same split:
- * 30 + 80 + 40 + 40 on 190 g. Finish sits at the card's 3:45 mark.
+ * 30 + 80 + 40 + 40 on 190 g. The minute marks are bloom and drawdown, not
+ * a minute of pouring. Finish sits at the card's 3:45 mark.
  */
 class SeleneEngine : BrewEngine {
 
@@ -23,63 +24,70 @@ class SeleneEngine : BrewEngine {
         val cumThree = (cumTwo + pourThree).coerceAtMost(total)
         val pourFour = (total - cumThree).coerceAtLeast(0.0)
 
-        return listOf(
-            BrewStep(
-                order = 1,
+        val bloomSec = kettlePourSec(bloom, 60, BLOOM_G_PER_SEC)
+        val secondSec = kettlePourSec(cumTwo - bloom, 70, KETTLE_G_PER_SEC)
+        val thirdSec = kettlePourSec(cumThree - cumTwo, 50, KETTLE_G_PER_SEC)
+        val fourthSec = kettlePourSec(pourFour, 30, KETTLE_G_PER_SEC)
+
+        return (
+            timedPour(
                 name = "Bloom",
                 action = StepAction.BLOOM,
-                waterPercentage = bloom / total,
-                waterAmount = bloom,
-                cumulativeWater = bloom,
-                startTimeSec = 0,
-                endTimeSec = 60,
-                instruction = "Pour ${bloom.roundToInt()}g and bloom for 1 minute",
-                tip = "Steady pour, not too slow and not too fast"
-            ),
-            BrewStep(
-                order = 2,
+                amount = bloom,
+                cumulative = bloom,
+                total = total,
+                startSec = 0,
+                endSec = 60,
+                pourSec = bloomSec,
+                pourInstruction = "Pour ${bloom.roundToInt()}g in ${bloomSec}s",
+                waitInstruction = "Let it bloom until 1:00",
+                pourTip = "Steady pour, not too slow and not too fast",
+            ) + timedPour(
                 name = "Pour 2",
                 action = StepAction.POUR,
-                waterPercentage = (cumTwo - bloom).coerceAtLeast(0.0) / total,
-                waterAmount = (cumTwo - bloom).coerceAtLeast(0.0),
-                cumulativeWater = cumTwo,
-                startTimeSec = 60,
-                endTimeSec = 130,
-                instruction = "Pour to ${cumTwo.roundToInt()}g, then wait until the bed dries"
-            ),
-            BrewStep(
-                order = 3,
+                amount = (cumTwo - bloom).coerceAtLeast(0.0),
+                cumulative = cumTwo,
+                total = total,
+                startSec = 60,
+                endSec = 130,
+                pourSec = secondSec,
+                pourInstruction = "Pour to ${cumTwo.roundToInt()}g in ${secondSec}s",
+                waitInstruction = "Wait until the bed dries",
+            ) + timedPour(
                 name = "Pour 3",
                 action = StepAction.POUR,
-                waterPercentage = (cumThree - cumTwo).coerceAtLeast(0.0) / total,
-                waterAmount = (cumThree - cumTwo).coerceAtLeast(0.0),
-                cumulativeWater = cumThree,
-                startTimeSec = 130,
-                endTimeSec = 180,
-                instruction = "Pour to ${cumThree.roundToInt()}g, then wait until the bed dries"
-            ),
-            BrewStep(
-                order = 4,
+                amount = (cumThree - cumTwo).coerceAtLeast(0.0),
+                cumulative = cumThree,
+                total = total,
+                startSec = 130,
+                endSec = 180,
+                pourSec = thirdSec,
+                pourInstruction = "Pour to ${cumThree.roundToInt()}g in ${thirdSec}s",
+                waitInstruction = "Wait until the bed dries",
+            ) + timedPour(
                 name = "Pour 4",
                 action = StepAction.POUR,
-                waterPercentage = pourFour / total,
-                waterAmount = pourFour,
-                cumulativeWater = total,
-                startTimeSec = 180,
-                endTimeSec = 210,
-                instruction = "Pour to ${total.roundToInt()}g once the bed has dried"
-            ),
-            BrewStep(
-                order = 5,
-                name = "Drawdown",
-                action = StepAction.WAIT,
-                waterPercentage = 0.0,
-                waterAmount = 0.0,
-                cumulativeWater = total,
-                startTimeSec = 210,
-                endTimeSec = 225,
-                instruction = "Finish around 3:30–3:45"
+                amount = pourFour,
+                cumulative = total,
+                total = total,
+                startSec = 180,
+                endSec = 210,
+                pourSec = fourthSec,
+                pourInstruction = "Pour to ${total.roundToInt()}g in ${fourthSec}s",
+                waitInstruction = "Wait until 3:30",
+            ) + listOf(
+                BrewStep(
+                    order = 0,
+                    name = "Drawdown",
+                    action = StepAction.WAIT,
+                    waterPercentage = 0.0,
+                    waterAmount = 0.0,
+                    cumulativeWater = total,
+                    startTimeSec = 210,
+                    endTimeSec = 225,
+                    instruction = "Finish around 3:30–3:45",
+                )
             )
-        )
+            ).withOrders()
     }
 }

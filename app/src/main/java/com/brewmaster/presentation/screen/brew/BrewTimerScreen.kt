@@ -1,11 +1,22 @@
 package com.brewmaster.presentation.screen.brew
 
+import android.Manifest
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
+import android.content.pm.PackageManager
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
+import android.os.IBinder
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -40,18 +51,28 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.brewmaster.domain.model.BrewCalculation
 import com.brewmaster.domain.model.BrewStep
 import com.brewmaster.presentation.component.CircularProgressTimer
 import com.brewmaster.presentation.component.DynamicPhaseIndicator
@@ -73,6 +94,31 @@ fun BrewTimerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val view = LocalView.current
+    val scope = rememberCoroutineScope()
+    // 3, 2, 1 before a new brew. 0 means the countdown is not showing.
+    var readyCount by remember {
+        mutableStateOf(
+            if (viewModel.uiState.value.calculation == null && BrewSession.currentCalculation != null) 3 else 0
+        )
+    }
+
+    // Keep the screen awake while getting ready or while the brew is live.
+    val keepAwake = readyCount > 0 || (uiState.calculation != null && !uiState.isFinished && !uiState.autoPaused)
+    DisposableEffect(view, keepAwake) {
+        view.keepScreenOn = keepAwake
+        onDispose { view.keepScreenOn = false }
+    }
+
+    val timerPrefs = remember { context.getSharedPreferences(BrewTimerService.PREFS, Context.MODE_PRIVATE) }
+    var soundOn by remember { mutableStateOf(timerPrefs.getBoolean(BrewTimerService.PREF_STEP_SOUND, false)) }
+    // Only used for the on-screen clock; the service beeps on its own.
+    val toneGenerator = remember {
+        runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, BrewTimerService.TONE_VOLUME) }.getOrNull()
+    }
+    DisposableEffect(toneGenerator) {
+        onDispose { toneGenerator?.release() }
+    }
 
     val vibrator = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -84,30 +130,92 @@ fun BrewTimerScreen(
         }
     }
 
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val start = viewModel.takePendingStart()
+        val calc = viewModel.uiState.value.calculation
+        if (granted && calc != null) {
+            viewModel.markUsingService()
+            startTimerService(context, calc, start)
+        } else {
+            viewModel.beginLocalClock(start)
+        }
+    }
+
     LaunchedEffect(Unit) {
-        val calculation = BrewSession.currentCalculation ?: return@LaunchedEffect
-        viewModel.startBrew(calculation)
-        startTimerService(context, calculation.steps.firstOrNull()?.name.orEmpty())
-    }
-
-    LaunchedEffect(uiState.currentStepIndex) {
-        uiState.currentStep?.let { step ->
-            updateTimerServiceStep(context, step.name)
+        val session = BrewSession.currentCalculation
+        // The brew clock starts after this, so the 3 seconds are not part of the recipe.
+        if (viewModel.uiState.value.calculation == null && session != null) {
+            for (n in 3 downTo 1) {
+                readyCount = n
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, BrewTimerService.TONE_MS)
+                delay(1000)
+            }
+            readyCount = 0
+        }
+        // Null on rotation (the clock is already going) and when there is no brew.
+        val start = viewModel.takeBrew(session) ?: return@LaunchedEffect
+        val calc = viewModel.uiState.value.calculation ?: return@LaunchedEffect
+        val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        val granted = !needsPermission || ContextCompat.checkSelfPermission(
+            context, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            viewModel.markUsingService()
+            startTimerService(context, calc, start)
+        } else {
+            viewModel.holdPendingStart(start)
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
-    LaunchedEffect(uiState.isFinished) {
-        if (uiState.isFinished) {
-            stopTimerService(context)
+    DisposableEffect(context) {
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+                val service = (binder as? BrewTimerService.BrewTimerBinder)?.getService() ?: return
+                scope.launch {
+                    service.timerState.collect { clock ->
+                        viewModel.onClock(
+                            clock.elapsedSeconds,
+                            clock.isRunning,
+                            clock.sessionActive,
+                            clock.autoPaused
+                        )
+                    }
+                }
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) = Unit
         }
+        context.bindService(
+            Intent(context, BrewTimerService::class.java),
+            connection,
+            Context.BIND_AUTO_CREATE
+        )
+        onDispose { context.unbindService(connection) }
     }
+
+    val leaveBrew = {
+        if (viewModel.uiState.value.usesService) {
+            sendTimerAction(context, BrewTimerService.ACTION_STOP)
+        }
+        onNavigateBack()
+    }
+    BackHandler(onBack = leaveBrew)
 
     LaunchedEffect(Unit) {
         viewModel.stepTransitions.collect { event ->
-            val pattern = if (event.isFinished) {
-                longArrayOf(0, 300, 100, 300, 100, 500)
-            } else {
-                longArrayOf(0, 150, 50, 150)
+            val pattern = when {
+                event.isFinished -> BrewTimerService.FINISH_PATTERN
+                event.isTargetReached -> BrewTimerService.TARGET_PATTERN
+                else -> BrewTimerService.STEP_PATTERN
+            }
+            if (soundOn && !event.isFinished) {
+                toneGenerator?.startTone(
+                    if (event.isTargetReached) ToneGenerator.TONE_PROP_BEEP2 else ToneGenerator.TONE_PROP_BEEP,
+                    BrewTimerService.TONE_MS
+                )
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 vibrator.vibrate(
@@ -127,16 +235,48 @@ fun BrewTimerScreen(
             .fillMaxSize()
             .background(DarkBackground)
     ) {
-        if (calculation == null) {
-            Box(
+        if (readyCount > 0) {
+            Column(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "No brew data available",
+                    text = "Be Ready",
                     color = TextSecondary,
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Medium
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = readyCount.toString(),
+                    color = LimeGreen,
+                    fontSize = 96.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 96.sp
+                )
+            }
+        } else if (calculation == null) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 32.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "No brew to show. Start one from the dashboard.",
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = leaveBrew,
+                    colors = ButtonDefaults.buttonColors(containerColor = LimeGreen, contentColor = DarkBackground)
+                ) {
+                    Text("Back to dashboard")
+                }
             }
         } else {
             Column(
@@ -149,9 +289,18 @@ fun BrewTimerScreen(
                 TopBar(
                     techniqueName = calculation.technique.name,
                     totalTimeSec = calculation.totalBrewTimeSec,
-                    onBack = {
-                        stopTimerService(context)
-                        onNavigateBack()
+                    onBack = leaveBrew,
+                    soundOn = soundOn,
+                    onToggleSound = {
+                        soundOn = !soundOn
+                        timerPrefs.edit().putBoolean(BrewTimerService.PREF_STEP_SOUND, soundOn).apply()
+                        if (uiState.usesService) {
+                            context.startService(
+                                Intent(context, BrewTimerService::class.java)
+                                    .setAction(BrewTimerService.ACTION_SET_SOUND)
+                                    .putExtra(BrewTimerService.EXTRA_SOUND, soundOn)
+                            )
+                        }
                     }
                 )
 
@@ -164,7 +313,9 @@ fun BrewTimerScreen(
                     stepProgress = uiState.stepProgress,
                     currentStepName = step?.name ?: "",
                     footer = when {
-                        uiState.isFinished -> "done"
+                        uiState.isFinished -> "done ${formatClock(uiState.elapsedSeconds)}"
+                        uiState.autoPaused -> "paused ${BrewTimerService.OVERRUN_LIMIT_SEC / 60} min past target"
+                        uiState.elapsedSeconds >= calculation.totalBrewTimeSec -> "past target"
                         nextStep != null -> "next: ${nextStep.name} at ${formatClock(step?.endTimeSec ?: 0)}"
                         else -> "until ${formatClock(calculation.totalBrewTimeSec)}"
                     }
@@ -197,12 +348,45 @@ fun BrewTimerScreen(
                     isRunning = uiState.isRunning,
                     isFinished = uiState.isFinished,
                     canGoBack = uiState.currentStepIndex > 0 || uiState.elapsedSeconds > 0,
-                    canSkip = !uiState.isFinished,
-                    onPause = viewModel::pauseTimer,
-                    onResume = viewModel::resumeTimer,
-                    onReset = viewModel::resetTimer,
-                    onPrevious = viewModel::goToPreviousStep,
-                    onSkip = viewModel::skipToNextStep
+                    canSkip = viewModel.peekNextStartSec() != null,
+                    onPause = {
+                        if (uiState.usesService) sendTimerAction(context, BrewTimerService.ACTION_PAUSE)
+                        else viewModel.pauseLocal()
+                    },
+                    onResume = {
+                        if (uiState.usesService) sendTimerAction(context, BrewTimerService.ACTION_RESUME)
+                        else viewModel.resumeLocal()
+                    },
+                    onReset = {
+                        val wasFinished = uiState.isFinished
+                        viewModel.prepareForClock()
+                        when {
+                            !uiState.usesService -> viewModel.resetLocal()
+                            // Drawdown stopped the service, so start a paused one.
+                            wasFinished -> startTimerService(context, calculation, ClockStart(0, paused = true))
+                            else -> sendTimerAction(context, BrewTimerService.ACTION_RESET)
+                        }
+                    },
+                    onPrevious = {
+                        val target = viewModel.peekPreviousStartSec() ?: return@BottomControls
+                        val wasFinished = uiState.isFinished
+                        viewModel.prepareForClock()
+                        when {
+                            !uiState.usesService -> viewModel.seekLocal(target)
+                            wasFinished -> startTimerService(context, calculation, ClockStart(target, paused = true))
+                            else -> seekTimer(context, target)
+                        }
+                    },
+                    onSkip = {
+                        val target = viewModel.peekNextStartSec() ?: return@BottomControls
+                        if (uiState.usesService) seekTimer(context, target) else viewModel.seekLocal(target)
+                    },
+                    onDrawdown = {
+                        // Stop the service so no paused notification is left behind.
+                        if (uiState.usesService) sendTimerAction(context, BrewTimerService.ACTION_STOP)
+                        else viewModel.pauseLocal()
+                        viewModel.finishDrawdown()
+                    }
                 )
             }
         }
@@ -214,10 +398,7 @@ fun BrewTimerScreen(
         ) {
             StopAlertOverlay(
                 totalVolume = calculation?.totalVolume ?: 0.0,
-                onDismiss = {
-                    stopTimerService(context)
-                    viewModel.dismissStopAlert()
-                }
+                onDismiss = viewModel::dismissStopAlert
             )
         }
 
@@ -230,9 +411,13 @@ fun BrewTimerScreen(
                 elapsedSec = uiState.elapsedSeconds,
                 targetSec = calculation?.totalBrewTimeSec ?: 0,
                 adviceFor = viewModel::coachAdvice,
-                onDone = {
-                    viewModel.dismissCoach()
-                    onNavigateBack()
+                onDone = { rating, symptom ->
+                    scope.launch {
+                        // Save before leaving, so popping the screen cannot cancel the write.
+                        if (rating != null) viewModel.saveToJournal(rating, symptom)
+                        viewModel.dismissCoach()
+                        leaveBrew()
+                    }
                 }
             )
         }
@@ -243,7 +428,9 @@ fun BrewTimerScreen(
 private fun TopBar(
     techniqueName: String,
     totalTimeSec: Int,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    soundOn: Boolean,
+    onToggleSound: () -> Unit
 ) {
     val totalMinutes = totalTimeSec / 60
     val totalSeconds = totalTimeSec % 60
@@ -274,6 +461,14 @@ private fun TopBar(
             style = MaterialTheme.typography.titleMedium,
             color = TextMuted
         )
+
+        IconButton(onClick = onToggleSound) {
+            Icon(
+                imageVector = if (soundOn) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
+                contentDescription = if (soundOn) "Step sound on" else "Step sound off",
+                tint = if (soundOn) LimeGreen else TextMuted
+            )
+        }
     }
 }
 
@@ -366,7 +561,8 @@ private fun BottomControls(
     onResume: () -> Unit,
     onReset: () -> Unit,
     onPrevious: () -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
+    onDrawdown: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -428,6 +624,26 @@ private fun BottomControls(
             }
         }
 
+        if (!isFinished) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onDrawdown,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DarkCard,
+                    contentColor = LimeGreen
+                )
+            ) {
+                Text(
+                    text = "Drawdown done",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(4.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -479,10 +695,20 @@ private fun targetRate(step: BrewStep): String {
 
 private fun formatClock(sec: Int): String = "%d:%02d".format(sec / 60, sec % 60)
 
-private fun startTimerService(context: Context, initialStepName: String) {
+/** Starts the foreground clock with the whole step schedule, so it can run without the screen. */
+private fun startTimerService(context: Context, calculation: BrewCalculation, start: ClockStart) {
     val intent = Intent(context, BrewTimerService::class.java).apply {
         action = BrewTimerService.ACTION_START
-        putExtra(BrewTimerService.EXTRA_STEP_NAME, initialStepName)
+        putExtra(BrewTimerService.EXTRA_STEP_NAMES, calculation.steps.map { it.name }.toTypedArray())
+        putExtra(BrewTimerService.EXTRA_STEP_STARTS, calculation.steps.map { it.startTimeSec }.toIntArray())
+        putExtra(BrewTimerService.EXTRA_TARGET_SEC, calculation.totalBrewTimeSec)
+        putExtra(BrewTimerService.EXTRA_ELAPSED_SEC, start.elapsedSec)
+        putExtra(BrewTimerService.EXTRA_START_PAUSED, start.paused)
+        putExtra(
+            BrewTimerService.EXTRA_SOUND,
+            context.getSharedPreferences(BrewTimerService.PREFS, Context.MODE_PRIVATE)
+                .getBoolean(BrewTimerService.PREF_STEP_SOUND, false)
+        )
     }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         context.startForegroundService(intent)
@@ -491,17 +717,14 @@ private fun startTimerService(context: Context, initialStepName: String) {
     }
 }
 
-private fun updateTimerServiceStep(context: Context, stepName: String) {
-    val intent = Intent(context, BrewTimerService::class.java).apply {
-        action = BrewTimerService.ACTION_UPDATE_STEP
-        putExtra(BrewTimerService.EXTRA_STEP_NAME, stepName)
-    }
-    context.startService(intent)
+private fun sendTimerAction(context: Context, action: String) {
+    context.startService(Intent(context, BrewTimerService::class.java).setAction(action))
 }
 
-private fun stopTimerService(context: Context) {
+private fun seekTimer(context: Context, elapsedSec: Int) {
     val intent = Intent(context, BrewTimerService::class.java).apply {
-        action = BrewTimerService.ACTION_STOP
+        action = BrewTimerService.ACTION_SEEK
+        putExtra(BrewTimerService.EXTRA_ELAPSED_SEC, elapsedSec)
     }
     context.startService(intent)
 }

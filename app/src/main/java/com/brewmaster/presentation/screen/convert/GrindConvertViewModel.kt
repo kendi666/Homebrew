@@ -1,6 +1,7 @@
 package com.brewmaster.presentation.screen.convert
 
 import androidx.lifecycle.ViewModel
+import com.brewmaster.domain.model.ConvertedGrindDial
 import com.brewmaster.domain.model.GrindConversionProfile
 import com.brewmaster.domain.model.GrindConversionResult
 import com.brewmaster.domain.usecase.ConvertGrindUseCase
@@ -12,11 +13,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
+enum class ConvertMode { GRINDER, MICRON }
+
 data class GrindConvertUiState(
     val profiles: List<GrindConversionProfile> = emptyList(),
+    val mode: ConvertMode = ConvertMode.GRINDER,
     val sourceId: String = "fm",
     val dialText: String = "8.0",
+    val micronText: String = "850",
+    val targetId: String = "1zpresso_k_ultra",
     val result: GrindConversionResult? = null,
+    val micronDials: List<ConvertedGrindDial> = emptyList(),
     val brandFilter: String? = null
 ) {
     val source: GrindConversionProfile?
@@ -51,14 +58,25 @@ class GrindConvertViewModel @Inject constructor(
         recalculate()
     }
 
+    fun onModeSelected(mode: ConvertMode) {
+        _uiState.update { it.copy(mode = mode) }
+        recalculate()
+    }
+
+    fun onTargetSelected(profile: GrindConversionProfile) {
+        _uiState.update { it.copy(targetId = profile.id) }
+    }
+
     fun onSourceSelected(profile: GrindConversionProfile) {
-        val mid = profile.dialOptions().let { opts ->
+        // Keep the same grind: start the new grinder at the dial that matches the current result.
+        val carried = _uiState.value.result?.estimatedMicron?.let { profile.micronToDial(it) }
+        val start = carried ?: profile.dialOptions().let { opts ->
             opts.getOrNull(opts.size / 2) ?: ((profile.dialMin + profile.dialMax) / 2)
         }
         _uiState.update {
             it.copy(
                 sourceId = profile.id,
-                dialText = profile.formatDial(mid)
+                dialText = profile.formatDial(start)
             )
         }
         recalculate()
@@ -66,6 +84,11 @@ class GrindConvertViewModel @Inject constructor(
 
     fun onDialChanged(text: String) {
         _uiState.update { it.copy(dialText = text) }
+        recalculate()
+    }
+
+    fun onMicronChanged(text: String) {
+        _uiState.update { it.copy(micronText = text) }
         recalculate()
     }
 
@@ -86,10 +109,30 @@ class GrindConvertViewModel @Inject constructor(
         recalculate()
     }
 
+    fun nudgeMicron(deltaSteps: Int) {
+        val current = _uiState.value.micronText.replace(',', '.').toDoubleOrNull() ?: 850.0
+        val next = (current + deltaSteps * 10.0).coerceIn(0.0, 1600.0)
+        val text = if (next == next.toLong().toDouble()) next.toLong().toString() else next.toString()
+        _uiState.update { it.copy(micronText = text) }
+        recalculate()
+    }
+
     private fun recalculate() {
         val state = _uiState.value
-        val dial = state.dialText.replace(',', '.').toDoubleOrNull() ?: return
-        val result = convertGrind(state.sourceId, dial)
-        _uiState.update { it.copy(result = result) }
+        if (state.mode == ConvertMode.MICRON) {
+            val micron = state.micronText.replace(',', '.').toDoubleOrNull()
+            if (micron == null) {
+                _uiState.update { it.copy(micronDials = emptyList()) }
+                return
+            }
+            _uiState.update { it.copy(micronDials = convertGrind.fromMicron(micron)) }
+        } else {
+            val dial = state.dialText.replace(',', '.').toDoubleOrNull()
+            if (dial == null) {
+                _uiState.update { it.copy(result = null) }
+                return
+            }
+            _uiState.update { it.copy(result = convertGrind(state.sourceId, dial)) }
+        }
     }
 }

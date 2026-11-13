@@ -54,7 +54,8 @@ data class DashboardUiState(
     val customSteps: List<com.brewmaster.domain.model.CustomStepConfig> = listOf(
         com.brewmaster.domain.model.CustomStepConfig(com.brewmaster.domain.model.StepAction.BLOOM, 45, 0.20),
         com.brewmaster.domain.model.CustomStepConfig(com.brewmaster.domain.model.StepAction.POUR, 135, 0.80),
-    )
+    ),
+    val customWarning: String? = null
 )
 
 @HiltViewModel
@@ -89,8 +90,9 @@ class DashboardViewModel @Inject constructor(
             state.copy(
                 techniques = techniques,
                 selectedTechnique = first,
-                ratio = first?.defaultRatio?.toString() ?: state.ratio,
-                grindSize = dialClicks?.let { defaultGrinder.nearestGrindSize(it) }
+                ratio = first?.defaultRatio?.let { formatDecimal(it) } ?: state.ratio,
+                grindSize = defaultDial.toDoubleOrNull()?.let { defaultGrinder?.grindSizeForDial(it) }
+                    ?: dialClicks?.let { defaultGrinder?.nearestGrindSize(it) }
                     ?: first?.defaultGrind
                     ?: state.grindSize,
                 grinders = grinders,
@@ -121,7 +123,7 @@ class DashboardViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 selectedTechnique = technique,
-                ratio = technique.defaultRatio.toString(),
+                ratio = formatDecimal(technique.defaultRatio),
                 grindSize = applyGrindShift(technique.defaultGrind, targetProfile.grindShift)
             )
         }
@@ -133,7 +135,7 @@ class DashboardViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 selectedTechnique = suggestion.technique,
-                ratio = suggestion.technique.defaultRatio.toString(),
+                ratio = formatDecimal(suggestion.technique.defaultRatio),
                 grindSize = suggestion.inferredGrind,
                 customTempMin = suggestion.tempMin,
                 customTempMax = suggestion.tempMax
@@ -156,7 +158,7 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun onGrindSizeChanged(grindSize: GrindSize) {
-        _uiState.update { it.copy(grindSize = grindSize, grinderClicks = "") }
+        _uiState.update { it.copy(grindSize = grindSize, grinderClicks = dialFor(it.selectedGrinder, grindSize)) }
         recalculate()
     }
 
@@ -176,13 +178,13 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun onGrinderClicksChanged(clicks: String) {
-        val parsed = parseClicks(clicks)
         _uiState.update { state ->
             val grinder = state.selectedGrinder
-            val inferred = if (parsed != null && grinder != null) {
-                grinder.nearestGrindSize(parsed)
-            } else {
-                state.grindSize
+            val dial = clicks.trim().replace(',', '.').toDoubleOrNull()
+            val inferred = when {
+                dial != null && grinder != null ->
+                    grinder.grindSizeForDial(dial) ?: grinder.nearestGrindSize(grinder.dialToClicks(dial))
+                else -> state.grindSize
             }
             state.copy(grinderClicks = clicks, grindSize = inferred)
         }
@@ -220,7 +222,7 @@ class DashboardViewModel @Inject constructor(
                     selectedProcess = matchingProcess ?: state.selectedProcess,
                     grindSize = grind,
                     ratio = ratio,
-                    grinderClicks = "",
+                    grinderClicks = dialFor(state.selectedGrinder, grind),
                     showBeanPicker = false
                 )
             }
@@ -249,7 +251,7 @@ class DashboardViewModel @Inject constructor(
             it.copy(
                 targetProfile = profile,
                 grindSize = adjustedGrind,
-                grinderClicks = ""
+                grinderClicks = dialFor(it.selectedGrinder, adjustedGrind)
             )
         }
         recalculate()
@@ -280,8 +282,8 @@ class DashboardViewModel @Inject constructor(
 
     fun onRemoveCustomStep(index: Int) {
         _uiState.update {
-            val newSteps = it.customSteps.toMutableList().apply { removeAt(index) }
-            it.copy(customSteps = newSteps)
+            if (index !in it.customSteps.indices) return@update it
+            it.copy(customSteps = it.customSteps.toMutableList().apply { removeAt(index) })
         }
         recalculate()
     }
@@ -320,7 +322,10 @@ class DashboardViewModel @Inject constructor(
                     createdAt = System.currentTimeMillis(),
                     grinderSetting = state.grinderClicks.ifBlank { null },
                     tempMin = tempMin ?: state.calculation?.tempMin,
-                    tempMax = tempMax ?: state.calculation?.tempMax
+                    tempMax = tempMax ?: state.calculation?.tempMax,
+                    grinderId = state.selectedGrinder?.id?.takeIf { state.grinderClicks.isNotBlank() },
+                    targetProfile = state.targetProfile,
+                    customSteps = state.customSteps.takeIf { technique.id == "custom" }
                 )
             )
             _uiState.update { it.copy(showSaveRecipeDialog = false) }
@@ -336,7 +341,16 @@ class DashboardViewModel @Inject constructor(
         val state = _uiState.value
         val technique = state.techniques.find { it.id == recipe.techniqueId }
         val process = state.processes.find { it.id == recipe.processId }
-        val matchingBean = state.beans.find { it.processId == recipe.processId }
+        // Match the bean by name. Matching by process picked any bean of that process,
+        // and its roast level then changed the brew temperature.
+        val matchingBean = state.beans.find { it.name.trim().equals(recipe.beanName.trim(), ignoreCase = true) }
+        val recipeGrinder = recipe.grinderId?.let { id -> state.grinders.find { it.id == id } }
+        // Recipes saved before 1.3.1 do not say which grinder the dial is for.
+        // Keep the dial only if it exists on the grinder that will show it.
+        val dialGrinder = recipeGrinder ?: state.selectedGrinder
+        val grinderSetting = recipe.grinderSetting?.takeIf { setting ->
+            recipeGrinder != null || dialGrinder?.filterDialLabels()?.contains(setting) == true
+        }
 
         _uiState.update {
             it.copy(
@@ -348,7 +362,10 @@ class DashboardViewModel @Inject constructor(
                 grindSize = recipe.grindSize,
                 brewMode = if (recipe.isIce) BrewMode.ICE else BrewMode.HOT,
                 iceWeight = formatDecimal(recipe.iceWeight ?: 0.0),
-                grinderClicks = recipe.grinderSetting.orEmpty(),
+                selectedGrinder = recipeGrinder ?: it.selectedGrinder,
+                grinderClicks = grinderSetting.orEmpty(),
+                targetProfile = recipe.targetProfile ?: it.targetProfile,
+                customSteps = recipe.customSteps ?: it.customSteps,
                 customTempMin = recipe.tempMin ?: it.customTempMin,
                 customTempMax = recipe.tempMax ?: it.customTempMax
             )
@@ -364,6 +381,23 @@ class DashboardViewModel @Inject constructor(
             pendingRecipe = null
         }
         recalculate()
+    }
+
+    /**
+     * The dial in the middle of [size] on [grinder], so the dial wheel moves with the
+     * grind chip instead of being cleared. Empty when that size is off the pour-over wheel.
+     */
+    private fun dialFor(grinder: Grinder?, size: GrindSize): String {
+        grinder ?: return ""
+        val band = grinder.dialBands.firstOrNull { it.size == size }
+        val dial = if (band != null) {
+            (band.from + band.to) / 2
+        } else {
+            grinder.clicksToDial(grinder.unitsForMicrons(size.microns))
+        }
+        val step = grinder.dialStep.coerceAtLeast(0.05)
+        val label = grinder.formatDial(Math.round(dial / step) * step)
+        return label.takeIf { it in grinder.filterDialLabels() }.orEmpty()
     }
 
     private fun applyGrindShift(base: GrindSize, shift: Int): GrindSize {
@@ -392,9 +426,21 @@ class DashboardViewModel @Inject constructor(
     private fun recalculate() {
         val state = _uiState.value
         val technique = state.selectedTechnique ?: return
-        val coffeeWeight = parseDecimal(state.coffeeWeight) ?: return
-        val ratio = parseDecimal(state.ratio) ?: return
-        if (coffeeWeight <= 0 || ratio <= 0) return
+        val coffeeWeight = parseDecimal(state.coffeeWeight)
+        val ratio = parseDecimal(state.ratio)
+        if (coffeeWeight == null || ratio == null || coffeeWeight <= 0 || ratio <= 0) {
+            _uiState.update { it.copy(calculation = null, suggestions = emptyList(), customWarning = null) }
+            return
+        }
+        if (technique.id == "custom") {
+            val warning = customStepWarning(state.customSteps)
+            if (warning != null) {
+                _uiState.update {
+                    it.copy(calculation = null, suggestions = emptyList(), customWarning = warning)
+                }
+                return
+            }
+        }
 
         val iceWeight = if (state.brewMode == BrewMode.ICE) {
             parseDecimal(state.iceWeight) ?: (coffeeWeight * ratio * DEFAULT_ICE_RATIO)
@@ -416,6 +462,10 @@ class DashboardViewModel @Inject constructor(
             customSteps = state.customSteps,
             customTempMin = if (technique.id == "custom") state.customTempMin else temps?.first,
             customTempMax = if (technique.id == "custom") state.customTempMax else temps?.second
+        ).copy(
+            processId = state.selectedProcess?.id ?: 0,
+            grinderName = state.selectedGrinder?.name?.takeIf { state.grinderClicks.isNotBlank() },
+            grinderSetting = state.grinderClicks.ifBlank { null }
         )
 
         val clicks = parseClicks(state.grinderClicks)
@@ -428,7 +478,19 @@ class DashboardViewModel @Inject constructor(
             brewMode = state.brewMode
         )
 
-        _uiState.update { it.copy(calculation = calculation, suggestions = suggestions) }
+        _uiState.update {
+            it.copy(calculation = calculation, suggestions = suggestions, customWarning = null)
+        }
+    }
+
+    private fun customStepWarning(steps: List<com.brewmaster.domain.model.CustomStepConfig>): String? {
+        if (steps.isEmpty()) return "Add at least one step. An empty recipe finishes immediately."
+        if (steps.any { it.durationSec < 1 }) return "Each step needs a duration of at least 1 second."
+        val waterPct = steps.sumOf { it.waterPercentage } * 100.0
+        if (waterPct !in 99.0..101.0) {
+            return "Water adds up to ${waterPct.toInt()}%, not 100%. The pours would not match the cup."
+        }
+        return null
     }
 
     private fun parseDecimal(value: String): Double? {

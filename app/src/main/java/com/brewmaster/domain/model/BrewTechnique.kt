@@ -1,5 +1,8 @@
 package com.brewmaster.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class BrewTechnique(
     val id: String,
     val name: String,

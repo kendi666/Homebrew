@@ -66,11 +66,19 @@ data class GrindConversionResult(
     val source: GrindConversionProfile,
     val sourceDial: Double,
     val estimatedMicron: Double,
-    val targets: List<ConvertedGrindDial>
+    val targets: List<ConvertedGrindDial>,
+    /** The typed dial was outside the source grinder and was moved to its limit. */
+    val sourceClamped: Boolean = false
 )
 
 data class ConvertedGrindDial(
     val profile: GrindConversionProfile,
     val dial: Double,
-    val micronCheck: Double
-)
+    val micronCheck: Double,
+    /** The bridge value is finer than this grinder's lowest dial; [dial] is its limit. */
+    val belowRange: Boolean = false,
+    /** The bridge value is coarser than this grinder's highest dial; [dial] is its limit. */
+    val aboveRange: Boolean = false
+) {
+    val outOfRange: Boolean get() = belowRange || aboveRange
+}

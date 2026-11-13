@@ -25,29 +25,52 @@ class ConvertGrindUseCase @Inject constructor(
             sourceDial.coerceIn(source.dialMin, source.dialMax),
             source.dialStep
         )
+        val half = source.dialStep / 2
+        val sourceClamped = sourceDial < source.dialMin - half || sourceDial > source.dialMax + half
         val micron = source.dialToMicron(dial)
 
         val targets = profiles
             .filter { it.id != source.id }
             .map { target ->
-                val targetDial = target.micronToDial(micron)
-                ConvertedGrindDial(
-                    profile = target,
-                    dial = targetDial,
-                    micronCheck = round(target.dialToMicron(targetDial))
-                )
+                convertedDial(target, micron)
             }
-            .sortedWith(
-                compareByDescending<ConvertedGrindDial> { it.profile.calibrated }
-                    .thenBy { it.profile.brand }
-                    .thenBy { it.profile.name }
-            )
+            .sortedWith(targetOrder)
 
         return GrindConversionResult(
             source = source,
             sourceDial = dial,
             estimatedMicron = round(micron),
-            targets = targets
+            targets = targets,
+            sourceClamped = sourceClamped
         )
     }
+
+    /** Map a bridge micron onto every grinder. M is the converter unit, not a measured particle size. */
+    fun fromMicron(micron: Double): List<ConvertedGrindDial> {
+        val m = micron.coerceIn(0.0, 1600.0)
+        return getProfiles()
+            .map { target ->
+                convertedDial(target, m)
+            }
+            .sortedWith(targetOrder)
+    }
+
+    /** Flags a dial that hit the grinder's limit, so 350 µm on a ZP6 is not shown as a plain 0.0. */
+    private fun convertedDial(target: GrindConversionProfile, micron: Double): ConvertedGrindDial {
+        val targetDial = target.micronToDial(micron)
+        val raw = if (target.slope == 0.0) target.dialMin else (micron - target.intercept) / target.slope
+        val half = target.dialStep / 2
+        return ConvertedGrindDial(
+            profile = target,
+            dial = targetDial,
+            micronCheck = round(target.dialToMicron(targetDial)),
+            belowRange = raw < target.dialMin - half,
+            aboveRange = raw > target.dialMax + half
+        )
+    }
+
+    private val targetOrder =
+        compareByDescending<ConvertedGrindDial> { it.profile.calibrated }
+            .thenBy { it.profile.brand }
+            .thenBy { it.profile.name }
 }

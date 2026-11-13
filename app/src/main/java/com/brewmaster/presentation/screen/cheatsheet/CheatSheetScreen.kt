@@ -120,14 +120,58 @@ fun CheatSheetScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "Untuk kopi dengan densitas tinggi seperti Ethiopia dan Kenya, bisa buat lebih coarse daripada kopi lainnya.",
+                            text = "Dense coffees such as Ethiopia and Kenya can take a coarser grind than other coffees.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontStyle = FontStyle.Italic
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Data resting diatas adalah subjective menurut dari pengalaman kami selama ini.",
+                            text = "The resting days above are subjective, based on our own experience so far.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontStyle = FontStyle.Italic
+                        )
+                    }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "BREW WATER",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = MaterialTheme.typography.labelMedium.letterSpacing * 1.5f
+                )
+            }
+
+            item {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = DarkCard
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "SCAA 2009",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = LimeGreen
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Target 150 ppm. Accepted range 75–250 ppm. A TDS meter does not measure hardness or alkalinity.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        brewWaters.forEach { water ->
+                            WaterTdsRow(water)
+                            Spacer(Modifier.height(8.dp))
+                        }
+                        Text(
+                            text = "Amidis and Cleo are maker claims. The other three brands publish no single TDS; their numbers are published readings, not a bottle spec.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontStyle = FontStyle.Italic
@@ -177,6 +221,49 @@ fun CheatSheetScreen(
             processes = state.processes,
             onDismiss = viewModel::onAddBeanDismissed,
             onSave = viewModel::onSaveBean
+        )
+    }
+}
+
+private data class WaterTds(
+    val name: String,
+    val tds: String,
+    val detail: String
+)
+
+private val brewWaters = listOf(
+    WaterTds("Amidis", "0 ppm", "Distilled. Below the range."),
+    WaterTds("Cleo", "<10 ppm", "Below the range."),
+    WaterTds("Nestlé Pure Life", "59, 66, 140 ppm", "Three meter readings."),
+    WaterTds("Aqua", "63, 112, 162 ppm", "19 springs. Three readings."),
+    WaterTds("Le Minerale", "173, 299, 388 ppm", "Three readings. 299 and 388 are above 250.")
+)
+
+@Composable
+private fun WaterTdsRow(water: WaterTds) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = water.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = water.tds,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                color = LimeGreen
+            )
+        }
+        Text(
+            text = water.detail,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

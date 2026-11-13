@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Ready countdown** — a new brew shows Be Ready and counts 3, 2, 1 with a beep before the clock starts. Those seconds are not part of the recipe.
+- **Save to journal from the coach** — rate the cup 1–5 after Drawdown done and it goes to the journal with the bean, technique, grind, temperature, taste note, grinder dial, and the actual brew time.
+- **Journal dial and time** — journal entries show the grinder and dial used and the brew time (database v9).
+- **Step sound** — a speaker button on the timer turns a short beep on or off for each step and for the target time. The choice is remembered. Off by default.
 - **Pour timeline** — the brew timer paints a block only while water is going in.
   Gaps are waits and drawdown, with a playhead on the current second.
 - **George Peng 2025** — Brewers Cup recipe at 1:14, 96°C, medium-fine. On 15 g /
@@ -16,8 +20,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Selene** — card recipe at 1:19, 91–92°C, medium. On 10 g / 190 g: bloom 30 g
   for 1 minute, pour to 110 g and wait until the bed dries, then 40 g + 40 g the
   same way. Finish 3:30–3:45. Other doses keep that 30/80/40/40 split.
+- **Ryan Wibawa** — double immersion on a Switch, 15 g / 220 g, medium. Closed
+  bloom 100 g at 86°C, open 5 s, closed pour to 220 g at 92°C in 20 s, open
+  through 2:00. Other doses keep 100/120. Valve-open steps are orange on the
+  pour timeline; pours stay blue.
+- **Devil's Recipe** — Kasuya's improved Switch version, 20 g / 300 g. Closed
+  bloom 50 g at 92°C, open pours to 200 g, closed pour to 300 g at 70°C, open
+  through 3:30. The last pour step says 70°C. Comandante start is 28 clicks.
+- **Comandante C40 in Grind Convert** — 30 per click on the bridge, so 28 clicks
+  is 840 and lands near K-Ultra 7.9. That number is the converter unit, not a
+  measured particle size.
+- **Micron to dial** — Grind Convert can start from a bridge micron and show the
+  dial for a chosen grinder, as well as grinder to grinder.
+- **ZP6 Special** — lined up with its factory chart (pour-over about 4.0–4.6,
+  French press about 5.0–6.0) on the same bridge as K-Ultra 8.5 and 9.5. The
+  22 µm burr step is not used.
+- **Brew water** — the cheat sheet shows the SCAA 2009 TDS target (150 ppm,
+  acceptable 75–250). Amidis 0 ppm and Cleo under 10 ppm are factory claims.
+  Nestlé Pure Life, Aqua, and Le Minerale have no single published TDS, so the
+  card lists the published readings instead of a match score.
 
 ### Changed
+- **Name** — the app is called Homebrew (launcher, notification, dashboard, share text). The package id stays `com.brewmaster`.
+- **Share** — a shared recipe is plain text. The `brewmaster://` link is gone.
+- **Target profiles** — More Acidity now grinds one step coarser and brews 1°C cooler with a bit more water. It used to grind finer and hotter, which pulls more and mutes acidity. More Body grinds one step finer with a stronger ratio at the same temperature, instead of coarser and cooler.
+- **Dashboard order** — Hot/Ice sits right after coffee weight and ratio, since it changes the water amounts.
+- **Grind chip moves the dial** — picking a grind size, bean, or profile sets the dial wheel to the middle of that size on the selected grinder instead of clearing it.
+- **C40 wheel** — goes to 36 clicks so Medium-Coarse to Extra-Coarse can be picked.
+- **K-Ultra dial category** — the number under the filter wheel follows the dial
+  bands (7.3 Medium-Fine, 8.5 Medium, 8.6 Medium-Coarse). Burr-gap clicks no
+  longer mark a V60 dial as Extra-Coarse.
 - **Hario Switch Hybrid** — short sweet immersion: bloom 3× dose, valve closed
   until 1:20 at ~7.3× dose (110 g on 15 g, same as half the kettle at 1:14.5),
   then two open pours. Default 1:14.5, 93°C, medium-fine, finish 2:40. At 1:17
@@ -33,20 +65,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wide Pause / Next step buttons with Prev step · Reset as text actions.
 
 ### Fixed
+- **Brew timer** — rotating the phone, dark mode, font scale, or split-screen no longer restarts the brew. System back stops the foreground timer. Pause, reset, next, and previous update the same clock as the notification, using elapsed realtime. The screen stays on during a brew. Android 13+ asks for notification permission; if it is denied the on-screen timer still runs. The timer can run past the target, and Drawdown done records the actual time.
+- **Post-brew coach** — a brew with no taste selected no longer defaults to "stale beans or water that's too cool". Fast and slow notes use the time Drawdown done recorded.
+- **Stale results** — clearing coffee weight, or entering 0, clears the brew numbers so Start cannot use the previous cup. An invalid grind-convert dial or micron clears the previous conversion.
+- **Custom technique** — "12,5" is 12.5%, not a silent 20%. An invalid duration is rejected instead of becoming 30 seconds. Steps that do not add up to about 100% water, or an empty step list, hide Start and say why.
+- **Grind category** — C40 28 clicks and K-Ultra 7.9 both read Medium-Fine. K-Ultra Coarse is labeled 9.2–9.5, matching its band. The convert slope is unchanged.
+- **Timer after drawdown** — Drawdown done stops the foreground service, so no paused notification is left behind. Prev or Reset after drawdown starts a paused clock again.
+- **Timer without the screen** — the service gets the full step schedule. The notification step name and the step vibration keep working when Android closes the screen in the background.
+- **Target reached** — one vibration when the clock passes the recipe time, since the stop alert now waits for Drawdown done.
+- **Forgotten timer** — the clock pauses itself 5 minutes after the target if Drawdown done is never tapped, and the screen is allowed to sleep.
+- **Process death** — the brew and its clock are saved with the screen. After Android kills the app, the timer comes back at the right time instead of an empty screen. The clock uses elapsed realtime, so time spent killed is counted.
+- **Double taps** — a second tap on START or Back while the screen is leaving is ignored. START no longer opens two timers, and Back no longer lands on a blank screen.
+- **C40 setting labels** — labels follow the dial bands (Medium-Fine 24–28 clicks, Medium 29–30). Picking Medium-Fine no longer suggests 20 clicks, which the band calls Fine.
+- **Saved recipes** — a recipe keeps its grinder, target profile, and custom steps (database v8). Loading matches the bean by name instead of the first bean with the same process, so the roast offset and temperature are the saved ones. A dial from an older recipe is only kept if that dial exists on the current grinder, so C40 28 is not put on a K-Ultra.
+- **Grind Convert limits** — a dial past a grinder's range is marked "finest it goes" or "coarsest it goes" in red instead of a plain number (350 µm on ZP6 was shown as 0.0). A typed source dial past its range says which dial was used. Switching the source grinder keeps the same grind instead of jumping to the middle dial.
+- **Ratio field** — technique ratios show as 14.67, not 14.666666666666666.
+- **Recipe list order** — newest first.
+- **Sample beans** — added once when the database is created, so they stay gone after you delete them.
+- **Timer service restart** — the service no longer restarts on its own after the app is killed (`START_NOT_STICKY`).
+- **One language** — the stop alert, the bean section, and the cheat sheet notes are in English like the rest of the app. The stop alert says "Remove the dripper" for every method and uses grams, not ml.
+- **Contrast** — muted text is #8E8E8E (4.5:1 or better on every dark surface) instead of #666666.
+- **Pour timeline** — a phase was painted as pouring for its whole clock, so Kasuya
+  showed 45s of water. The clock marks stay. The blue block is only the pour
+  (bloom ~5 g/s, a normal pulse ~8 g/s, a rapid pulse ~10 g/s) and the rest of
+  the phase is a Wait step. Continuous pours stay solid: Hoffmann's two main
+  pours, Rao's single pour, the osmotic stream, the single-cup main pour, and
+  Peng's Melodrip.
 - **B3** Room no longer falls back to wiping the DB. Added 1/2/3→4 table-create
   migrations (history starts at v4) and `exportSchema` so later upgrades can be
   validated. `fallbackToDestructiveMigration()` removed.
 - **B2** `GrindSize.fromStored()` — a bad/unknown grind string in recipes,
-  process presets, brew logs, or share links maps to Medium instead of crashing
-  the Flow.
+  process presets, or brew logs maps to Medium instead of crashing the Flow.
 - **B1** ICE mode caps ice so hot water stays ≥ 8× dose (bloom + remaining pour,
   including Bypass concentrate). Pour amounts no longer go negative; the stored
   ice weight is the capped value.
-- **B4** Deep-link / shared recipe while the app is already open is applied:
-  `BrewSession.pendingRecipe` is a StateFlow the dashboard collects, not a
-  one-shot `LaunchedEffect(Unit)`.
-- **B5** Import retries until process + bean catalogs have loaded, so a cold-start
-  deep link no longer drops process/bean.
 - **B7** Timer step-transition events are emitted *after* `_uiState.update`, not
   inside the updater lambda (avoids duplicate haptic / skip events).
 

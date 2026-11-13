@@ -14,7 +14,8 @@ val DarkBorder = Color(0xFF333333)
 
 val TextPrimary = Color(0xFFEEEEEE)
 val TextSecondary = Color(0xFFAAAAAA)
-val TextMuted = Color(0xFF666666)
+// 0xFF8E8E8E keeps 4.5:1 contrast on every dark surface (0xFF666666 was 2.7–3.5:1).
+val TextMuted = Color(0xFF8E8E8E)
 
 val ErrorRed = Color(0xFFFF6B6B)
 val IceBlue = Color(0xFF64D2FA)

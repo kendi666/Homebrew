@@ -52,7 +52,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import android.content.Context
 import android.content.Intent
 import com.brewmaster.domain.model.PersonalRecipe
-import com.brewmaster.domain.share.RecipeShareCodec
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -391,26 +390,22 @@ private fun formatDate(timestamp: Long): String {
     return sdf.format(Date(timestamp))
 }
 
-/** Builds a human-readable message + deep link and opens the Android share sheet. */
+/** Builds a human-readable message and opens the Android share sheet. */
 private fun shareRecipe(context: Context, recipe: PersonalRecipe, techniqueLabel: String) {
-    val link = RecipeShareCodec.encode(recipe)
     val ratio = if (recipe.ratio == recipe.ratio.toLong().toDouble()) {
         recipe.ratio.toLong().toString()
     } else {
         recipe.ratio.toString()
     }
     val message = buildString {
-        appendLine("☕ ${recipe.beanName} — BrewMaster recipe")
+        appendLine("☕ ${recipe.beanName} — Homebrew recipe")
         appendLine("Technique: $techniqueLabel")
         appendLine("Dose ${recipe.coffeeWeight}g · 1:$ratio · ${recipe.grindSize.label}${recipe.grinderSetting?.let { " · dial $it" }.orEmpty()}${if (recipe.tempMin != null && recipe.tempMax != null) " · ${recipe.tempMin}–${recipe.tempMax}°C" else ""}${if (recipe.isIce) " · Iced" else ""}")
         if (!recipe.notes.isNullOrBlank()) appendLine("Notes: ${recipe.notes}")
-        appendLine()
-        appendLine("Open in BrewMaster:")
-        append(link)
     }
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
-        putExtra(Intent.EXTRA_SUBJECT, "BrewMaster recipe: ${recipe.beanName}")
+        putExtra(Intent.EXTRA_SUBJECT, "Homebrew recipe: ${recipe.beanName}")
         putExtra(Intent.EXTRA_TEXT, message)
     }
     context.startActivity(Intent.createChooser(sendIntent, "Share recipe"))

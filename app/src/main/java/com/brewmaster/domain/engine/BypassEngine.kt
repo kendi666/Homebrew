@@ -7,6 +7,7 @@ import kotlin.math.roundToInt
 /**
  * Concentrate brew (~1:11) then dilute with hot water in the server.
  * totalHotWater = full cup water (brew + bypass).
+ * The concentrate goes in as two short pulses; the clock between them is a wait.
  */
 class BypassEngine : BrewEngine {
 
@@ -21,53 +22,75 @@ class BypassEngine : BrewEngine {
         val bloom = (coffeeWeight * 3.0).coerceAtMost(brewWater * 0.4)
         val pour = (brewWater - bloom).coerceAtLeast(0.0)
         val brewEnd = brewWater.roundToInt().toDouble()
+        val first = (pour / 2.0).roundToInt().toDouble()
+        val second = (pour - first).coerceAtLeast(0.0)
+        val afterFirst = (bloom + first).coerceAtMost(brewEnd)
 
-        return listOf(
-            BrewStep(
-                order = 1,
+        val bloomSec = kettlePourSec(bloom, 35, BLOOM_G_PER_SEC)
+        val firstSec = kettlePourSec(first, 35, KETTLE_G_PER_SEC)
+        val secondSec = kettlePourSec(second, 35, KETTLE_G_PER_SEC)
+        val bypassSec = kettlePourSec(bypass, 30, KETTLE_G_PER_SEC)
+
+        return (
+            timedPour(
                 name = "Bloom",
                 action = StepAction.BLOOM,
-                waterPercentage = bloom / totalHotWater,
-                waterAmount = bloom,
-                cumulativeWater = bloom,
-                startTimeSec = 0,
-                endTimeSec = 35,
-                instruction = "Pour ${bloom.roundToInt()}g for bloom, swirl"
-            ),
-            BrewStep(
-                order = 2,
-                name = "Concentrate",
+                amount = bloom,
+                cumulative = bloom,
+                total = totalHotWater,
+                startSec = 0,
+                endSec = 35,
+                pourSec = bloomSec,
+                pourInstruction = "Pour ${bloom.roundToInt()}g in ${bloomSec}s, swirl",
+                waitInstruction = "Let it bloom until 0:35",
+            ) + timedPour(
+                name = "Concentrate 1",
                 action = StepAction.POUR,
-                waterPercentage = pour / totalHotWater,
-                waterAmount = pour,
-                cumulativeWater = brewEnd,
-                startTimeSec = 35,
-                endTimeSec = 105,
-                instruction = "Pour to ${brewEnd.roundToInt()}g in 2 phases (concentrate ~1:11)"
-            ),
-            BrewStep(
-                order = 3,
-                name = "Drawdown",
-                action = StepAction.WAIT,
-                waterPercentage = 0.0,
-                waterAmount = 0.0,
-                cumulativeWater = brewEnd,
-                startTimeSec = 105,
-                endTimeSec = 150,
-                instruction = "Wait for drip to finish"
-            ),
-            BrewStep(
-                order = 4,
+                amount = first,
+                cumulative = afterFirst,
+                total = totalHotWater,
+                startSec = 35,
+                endSec = 70,
+                pourSec = firstSec,
+                pourInstruction = "Pour to ${afterFirst.roundToInt()}g in ${firstSec}s",
+                waitInstruction = "Wait until 1:10",
+            ) + timedPour(
+                name = "Concentrate 2",
+                action = StepAction.POUR,
+                amount = second,
+                cumulative = brewEnd,
+                total = totalHotWater,
+                startSec = 70,
+                endSec = 105,
+                pourSec = secondSec,
+                pourInstruction = "Pour to ${brewEnd.roundToInt()}g in ${secondSec}s",
+                waitInstruction = "Wait until 1:45",
+                pourTip = "Concentrate is about 1:11",
+            ) + listOf(
+                BrewStep(
+                    order = 0,
+                    name = "Drawdown",
+                    action = StepAction.WAIT,
+                    waterPercentage = 0.0,
+                    waterAmount = 0.0,
+                    cumulativeWater = brewEnd,
+                    startTimeSec = 105,
+                    endTimeSec = 150,
+                    instruction = "Wait for drip to finish",
+                )
+            ) + timedPour(
                 name = "Bypass",
                 action = StepAction.POUR,
-                waterPercentage = bypass / totalHotWater,
-                waterAmount = bypass,
-                cumulativeWater = totalHotWater.roundToInt().toDouble(),
-                startTimeSec = 150,
-                endTimeSec = 180,
-                instruction = "Add ${bypass.roundToInt()}g hot water (~94°C) into the server, swirl",
-                tip = "Strong brew, smooth cup — acidity softens without over-extracting"
+                amount = bypass,
+                cumulative = totalHotWater.roundToInt().toDouble(),
+                total = totalHotWater,
+                startSec = 150,
+                endSec = 180,
+                pourSec = bypassSec,
+                pourInstruction = "Add ${bypass.roundToInt()}g hot water (~94°C) into the server",
+                waitInstruction = "Swirl the server",
+                pourTip = "Strong brew, smooth cup — acidity softens without over-extracting",
             )
-        )
+            ).withOrders()
     }
 }

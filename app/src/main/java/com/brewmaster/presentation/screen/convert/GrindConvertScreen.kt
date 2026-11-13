@@ -59,10 +59,18 @@ fun GrindConvertScreen(
     viewModel: GrindConvertViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
-    val filteredTargets = state.result?.targets.orEmpty().let { targets ->
+    val dials = if (state.mode == ConvertMode.MICRON) {
+        state.micronDials
+    } else {
+        state.result?.targets.orEmpty()
+    }
+    val filteredTargets = dials.let { targets ->
         val brand = state.brandFilter
         if (brand == null) targets else targets.filter { it.profile.brand == brand }
     }
+    val selectedTarget = state.profiles.find { it.id == state.targetId }
+        ?: state.profiles.firstOrNull()
+    val selectedDial = state.micronDials.find { it.profile.id == selectedTarget?.id }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -99,13 +107,123 @@ fun GrindConvertScreen(
         ) {
             item {
                 Text(
-                    text = "FM 120 micron bridge: K-Ultra / Guerrero 64 Pro / Sculptor are calibrated. C3, C5, and JX-S share the same µm estimate — dial to taste.",
+                    text = "Grinder to grinder, or type a bridge micron and pick a grinder. That micron is this converter's unit, not a measured particle size.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
 
+            item {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    BrandChip(
+                        label = "Grinder to grinder",
+                        selected = state.mode == ConvertMode.GRINDER,
+                        onClick = { viewModel.onModeSelected(ConvertMode.GRINDER) }
+                    )
+                    BrandChip(
+                        label = "Micron to dial",
+                        selected = state.mode == ConvertMode.MICRON,
+                        onClick = { viewModel.onModeSelected(ConvertMode.MICRON) }
+                    )
+                }
+            }
+
+            if (state.mode == ConvertMode.MICRON) {
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        Text(
+                            text = "BRIDGE MICRON",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextMuted,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilledIconButton(
+                                onClick = { viewModel.nudgeMicron(-1) },
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = DarkCard,
+                                    contentColor = LimeGreen
+                                )
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                            }
+                            OutlinedTextField(
+                                value = state.micronText,
+                                onValueChange = viewModel::onMicronChanged,
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.weight(1f),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = LimeGreen,
+                                    cursorColor = LimeGreen,
+                                    focusedLabelColor = LimeGreen
+                                ),
+                                supportingText = { Text("0–1600 · step 10") }
+                            )
+                            FilledIconButton(
+                                onClick = { viewModel.nudgeMicron(1) },
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = DarkCard,
+                                    contentColor = LimeGreen
+                                )
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Increase")
+                            }
+                        }
+                        Text(
+                            text = "Same unit the grinder-to-grinder mode prints. A micron from another chart is a different scale.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextMuted
+                        )
+                    }
+                }
+                item {
+                    Text(
+                        text = "TO GRINDER",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextMuted,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(state.profiles, key = { "target-${it.id}" }) { profile ->
+                            val selected = profile.id == selectedTarget?.id
+                            Surface(
+                                onClick = { viewModel.onTargetSelected(profile) },
+                                shape = RoundedCornerShape(12.dp),
+                                color = DarkCard,
+                                border = if (selected) BorderStroke(2.dp, LimeGreen) else null
+                            ) {
+                                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                                    Text(
+                                        text = profile.brand,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (selected) LimeGreen else TextMuted
+                                    )
+                                    Text(
+                                        text = profile.name,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (selected) LimeGreen else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
             item {
                 Text(
                     text = "FROM GRINDER",
@@ -213,41 +331,39 @@ fun GrindConvertScreen(
                     }
                 }
             }
+            }
 
             item {
-                state.result?.let { result ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        colors = CardDefaults.cardColors(containerColor = DarkCard),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Estimated particle size",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = TextMuted
-                            )
-                            Text(
-                                text = "${formatMicron(result.estimatedMicron)} µm",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = LimeGreen
-                            )
-                            Text(
-                                text = "${result.source.brand} ${result.source.name} @ ${result.source.formatDial(result.sourceDial)}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary
-                            )
-                        }
+                if (state.mode == ConvertMode.MICRON) {
+                    selectedDial?.let { converted ->
+                        ResultCard(
+                            label = converted.profile.unitLabel.replaceFirstChar { it.uppercase() },
+                            value = converted.profile.formatDial(converted.dial),
+                            detail = "${converted.profile.brand} ${converted.profile.name} from ${formatMicron(state.micronText.replace(',', '.').toDoubleOrNull() ?: 0.0)}",
+                            warning = rangeWarning(converted)
+                        )
+                    }
+                } else {
+                    state.result?.let { result ->
+                        ResultCard(
+                            label = "Bridge micron",
+                            value = "${formatMicron(result.estimatedMicron)} µm",
+                            detail = "${result.source.brand} ${result.source.name} @ ${result.source.formatDial(result.sourceDial)}",
+                            warning = if (result.sourceClamped) {
+                                "${result.source.name} only goes from ${result.source.formatDial(result.source.dialMin)} " +
+                                    "to ${result.source.formatDial(result.source.dialMax)}. Converted from " +
+                                    result.source.formatDial(result.sourceDial) + " instead."
+                            } else {
+                                null
+                            }
+                        )
                     }
                 }
             }
 
             item {
                 Text(
-                    text = "EQUIVALENT ON OTHER GRINDERS",
+                    text = if (state.mode == ConvertMode.MICRON) "DIAL ON EACH GRINDER" else "EQUIVALENT ON OTHER GRINDERS",
                     style = MaterialTheme.typography.labelMedium,
                     color = TextMuted,
                     fontWeight = FontWeight.SemiBold,
@@ -284,6 +400,60 @@ fun GrindConvertScreen(
             }
         }
     }
+}
+
+@Composable
+private fun ResultCard(
+    label: String,
+    value: String,
+    detail: String,
+    warning: String? = null
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = TextMuted
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = LimeGreen
+            )
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary
+            )
+            warning?.let {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+/** Says when a dial is only the grinder's limit, not a real match. */
+private fun rangeWarning(converted: ConvertedGrindDial): String? = when {
+    converted.belowRange ->
+        "Finer than ${converted.profile.name} goes. ${converted.profile.formatDial(converted.dial)} is its finest " +
+            "setting (about ${formatMicron(converted.micronCheck)} µm), not a match."
+    converted.aboveRange ->
+        "Coarser than ${converted.profile.name} goes. ${converted.profile.formatDial(converted.dial)} is its coarsest " +
+            "setting (about ${formatMicron(converted.micronCheck)} µm), not a match."
+    else -> null
 }
 
 @Composable
@@ -351,12 +521,16 @@ private fun ConversionRow(
                     text = profile.formatDial(converted.dial),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = LimeGreen
+                    color = if (converted.outOfRange) MaterialTheme.colorScheme.error else LimeGreen
                 )
                 Text(
-                    text = profile.unitLabel,
+                    text = when {
+                        converted.belowRange -> "finest it goes"
+                        converted.aboveRange -> "coarsest it goes"
+                        else -> profile.unitLabel
+                    },
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted
+                    color = if (converted.outOfRange) MaterialTheme.colorScheme.error else TextMuted
                 )
             }
         }

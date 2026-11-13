@@ -1,6 +1,8 @@
 package com.brewmaster.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -16,62 +18,74 @@ import com.brewmaster.presentation.screen.troubleshoot.TroubleshootScreen
 @Composable
 fun BrewMasterNavGraph(navController: NavHostController) {
     NavHost(navController = navController, startDestination = "dashboard") {
-        composable("dashboard") {
+        composable("dashboard") { entry ->
             DashboardScreen(
                 onStartBrewing = { calculation ->
-                    BrewSession.currentCalculation = calculation
-                    navController.navigate("brew_timer")
+                    entry.ifResumed {
+                        BrewSession.currentCalculation = calculation
+                        navController.navigate("brew_timer") { launchSingleTop = true }
+                    }
                 },
                 onNavigateToRecipes = {
-                    navController.navigate("recipes")
+                    entry.ifResumed { navController.navigate("recipes") }
                 },
                 onNavigateToCheatSheet = {
-                    navController.navigate("cheatsheet")
+                    entry.ifResumed { navController.navigate("cheatsheet") }
                 },
                 onNavigateToJournal = {
-                    navController.navigate("journal")
+                    entry.ifResumed { navController.navigate("journal") }
                 },
                 onNavigateToTroubleshoot = {
-                    navController.navigate("troubleshoot")
+                    entry.ifResumed { navController.navigate("troubleshoot") }
                 },
                 onNavigateToGrindConvert = {
-                    navController.navigate("grind_convert")
+                    entry.ifResumed { navController.navigate("grind_convert") }
                 }
             )
         }
-        composable("brew_timer") {
+        composable("brew_timer") { entry ->
             BrewTimerScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { entry.ifResumed { navController.popBackStack() } }
             )
         }
-        composable("recipes") {
+        composable("recipes") { entry ->
             RecipeListScreen(
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { entry.ifResumed { navController.popBackStack() } },
                 onRecipeSelected = { recipe ->
-                    BrewSession.selectedRecipe = recipe
-                    navController.popBackStack("dashboard", inclusive = false)
+                    entry.ifResumed {
+                        BrewSession.selectedRecipe = recipe
+                        navController.popBackStack("dashboard", inclusive = false)
+                    }
                 }
             )
         }
-        composable("cheatsheet") {
+        composable("cheatsheet") { entry ->
             CheatSheetScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { entry.ifResumed { navController.popBackStack() } }
             )
         }
-        composable("journal") {
+        composable("journal") { entry ->
             BrewJournalScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { entry.ifResumed { navController.popBackStack() } }
             )
         }
-        composable("troubleshoot") {
+        composable("troubleshoot") { entry ->
             TroubleshootScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { entry.ifResumed { navController.popBackStack() } }
             )
         }
-        composable("grind_convert") {
+        composable("grind_convert") { entry ->
             GrindConvertScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { entry.ifResumed { navController.popBackStack() } }
             )
         }
     }
+}
+
+/**
+ * Ignores taps once this screen is leaving. A double tap on START or Back
+ * would otherwise open two timers or pop the dashboard and leave a blank screen.
+ */
+private inline fun NavBackStackEntry.ifResumed(block: () -> Unit) {
+    if (lifecycle.currentState == Lifecycle.State.RESUMED) block()
 }

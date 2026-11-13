@@ -3,7 +3,11 @@ package com.brewmaster.data.repository
 import com.brewmaster.data.local.dao.PersonalRecipeDao
 import com.brewmaster.data.local.entity.PersonalRecipeEntity
 import com.brewmaster.domain.model.GrindSize
+import com.brewmaster.domain.model.CustomStepConfig
 import com.brewmaster.domain.model.PersonalRecipe
+import com.brewmaster.domain.model.TargetProfile
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import com.brewmaster.domain.repository.RecipeRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -50,7 +54,14 @@ class RecipeRepositoryImpl @Inject constructor(
             createdAt = createdAt,
             grinderSetting = grinderSetting,
             tempMin = tempMin,
-            tempMax = tempMax
+            tempMax = tempMax,
+            grinderId = grinderId,
+            targetProfile = targetProfile?.let { name ->
+                TargetProfile.entries.firstOrNull { it.name == name }
+            },
+            customSteps = customSteps?.let { encoded ->
+                runCatching { stepsJson.decodeFromString(stepListSerializer, encoded) }.getOrNull()
+            }
         )
     }
 
@@ -69,7 +80,15 @@ class RecipeRepositoryImpl @Inject constructor(
             createdAt = createdAt,
             grinderSetting = grinderSetting,
             tempMin = tempMin,
-            tempMax = tempMax
+            tempMax = tempMax,
+            grinderId = grinderId,
+            targetProfile = targetProfile?.name,
+            customSteps = customSteps?.let { stepsJson.encodeToString(stepListSerializer, it) }
         )
+    }
+
+    private companion object {
+        val stepsJson = Json { ignoreUnknownKeys = true }
+        val stepListSerializer = ListSerializer(CustomStepConfig.serializer())
     }
 }

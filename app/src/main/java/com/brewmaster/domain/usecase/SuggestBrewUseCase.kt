@@ -27,7 +27,7 @@ class SuggestBrewUseCase @Inject constructor(
         brewMode: BrewMode
     ): List<BrewSuggestion> {
         val inferred = when {
-            grinder != null && clicks != null -> grinder.nearestGrindSize(clicks)
+            grinder != null && clicks != null -> grinder.grindSizeForClicks(clicks)
             else -> grindSize
         }
 

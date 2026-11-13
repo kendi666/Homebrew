@@ -132,6 +132,17 @@ fun FilterDialPicker(
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
+                    val dialValue = selectedDial.replace(',', '.').toDoubleOrNull()
+                    val category = dialValue?.let { grinder.grindSizeForDial(it) }
+                    if (category != null) {
+                        Text(
+                            text = category.label,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = LimeGreen,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
                     Text(
                         text = "${grinder.filterDialMin}–${grinder.filterDialMax} filter only",
                         style = MaterialTheme.typography.labelSmall,

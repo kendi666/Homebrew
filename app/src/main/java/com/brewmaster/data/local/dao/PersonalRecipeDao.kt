@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PersonalRecipeDao {
 
-    @Query("SELECT * FROM personal_recipes")
+    @Query("SELECT * FROM personal_recipes ORDER BY created_at DESC")
     fun getAll(): Flow<List<PersonalRecipeEntity>>
 
     @Query("SELECT * FROM personal_recipes WHERE id = :id")
