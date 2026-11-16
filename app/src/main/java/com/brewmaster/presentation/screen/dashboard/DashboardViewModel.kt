@@ -60,7 +60,9 @@ data class DashboardUiState(
     val editingRecipeId: Int = 0,
     val editingCreatedAt: Long = 0L,
     val editingBeanName: String = "",
-    val editingNotes: String = ""
+    val editingNotes: String = "",
+    /** When true, brew temperature is the number the user set, not the profile suggestion. */
+    val tempOverride: Boolean = false
 )
 
 @HiltViewModel
@@ -122,6 +124,28 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    fun onBrewTempShift(delta: Int) {
+        val calc = _uiState.value.calculation ?: return
+        var min = calc.tempMin + delta
+        var max = calc.tempMax + delta
+        if (min < 80) {
+            max += 80 - min
+            min = 80
+        }
+        if (max > 100) {
+            min -= max - 100
+            max = 100
+        }
+        _uiState.update {
+            it.copy(
+                tempOverride = true,
+                customTempMin = min.coerceIn(80, 100),
+                customTempMax = max.coerceIn(80, 100)
+            )
+        }
+        recalculate()
+    }
+
     fun onTechniqueSelected(technique: BrewTechnique) {
         val targetProfile = _uiState.value.targetProfile
         suggestionTemps = null
@@ -129,7 +153,8 @@ class DashboardViewModel @Inject constructor(
             it.copy(
                 selectedTechnique = technique,
                 ratio = formatDecimal(technique.defaultRatio),
-                grindSize = applyGrindShift(technique.defaultGrind, targetProfile.grindShift)
+                grindSize = applyGrindShift(technique.defaultGrind, targetProfile.grindShift),
+                tempOverride = false
             )
         }
         recalculate()
@@ -143,7 +168,8 @@ class DashboardViewModel @Inject constructor(
                 ratio = formatDecimal(suggestion.technique.defaultRatio),
                 grindSize = suggestion.inferredGrind,
                 customTempMin = suggestion.tempMin,
-                customTempMax = suggestion.tempMax
+                customTempMax = suggestion.tempMax,
+                tempOverride = false
             )
         }
         recalculate()
@@ -228,11 +254,12 @@ class DashboardViewModel @Inject constructor(
                     grindSize = grind,
                     ratio = ratio,
                     grinderClicks = dialFor(state.selectedGrinder, grind),
-                    showBeanPicker = false
+                    showBeanPicker = false,
+                    tempOverride = false
                 )
             }
         } else {
-            _uiState.update { it.copy(selectedBean = null, showBeanPicker = false) }
+            _uiState.update { it.copy(selectedBean = null, showBeanPicker = false, tempOverride = false) }
         }
         syncDefaultIceIfNeeded()
         recalculate()
@@ -256,7 +283,8 @@ class DashboardViewModel @Inject constructor(
             it.copy(
                 targetProfile = profile,
                 grindSize = adjustedGrind,
-                grinderClicks = dialFor(it.selectedGrinder, adjustedGrind)
+                grinderClicks = dialFor(it.selectedGrinder, adjustedGrind),
+                tempOverride = false
             )
         }
         recalculate()
@@ -379,19 +407,16 @@ class DashboardViewModel @Inject constructor(
                 grinderClicks = grinderSetting.orEmpty(),
                 targetProfile = recipe.targetProfile ?: it.targetProfile,
                 customSteps = recipe.customSteps ?: it.customSteps,
-                customTempMin = recipe.tempMin ?: it.customTempMin,
-                customTempMax = recipe.tempMax ?: it.customTempMax,
                 editingRecipeId = recipe.id,
                 editingCreatedAt = recipe.createdAt,
                 editingBeanName = recipe.beanName,
-                editingNotes = recipe.notes.orEmpty()
+                editingNotes = recipe.notes.orEmpty(),
+                tempOverride = recipe.tempMin != null && recipe.tempMax != null,
+                customTempMin = recipe.tempMin ?: it.customTempMin,
+                customTempMax = recipe.tempMax ?: it.customTempMax
             )
         }
-        suggestionTemps = if (recipe.tempMin != null && recipe.tempMax != null) {
-            recipe.tempMin to recipe.tempMax
-        } else {
-            null
-        }
+        suggestionTemps = null
         // B5: only drop the pending import once Room catalogs have arrived;
         // otherwise the process/bean collectors retry applyRecipe.
         if (state.processes.isNotEmpty() && state.beans.isNotEmpty()) {
@@ -477,8 +502,17 @@ class DashboardViewModel @Inject constructor(
             targetProfile = state.targetProfile,
             bean = state.selectedBean,
             customSteps = state.customSteps,
-            customTempMin = if (technique.id == "custom") state.customTempMin else temps?.first,
-            customTempMax = if (technique.id == "custom") state.customTempMax else temps?.second
+            customTempMin = when {
+                state.tempOverride -> state.customTempMin
+                technique.id == "custom" -> state.customTempMin
+                else -> temps?.first
+            },
+            customTempMax = when {
+                state.tempOverride -> state.customTempMax
+                technique.id == "custom" -> state.customTempMax
+                else -> temps?.second
+            },
+            useExactTemp = state.tempOverride
         ).copy(
             processId = state.selectedProcess?.id ?: 0,
             grinderName = state.selectedGrinder?.name?.takeIf { state.grinderClicks.isNotBlank() },

@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -329,6 +330,7 @@ fun DashboardScreen(
             CalculationSummaryCard(
                 calculation = calc,
                 isIce = state.brewMode == BrewMode.ICE,
+                onTempShift = viewModel::onBrewTempShift,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
@@ -512,6 +514,7 @@ private fun StickyBrewBar(
 private fun CalculationSummaryCard(
     calculation: BrewCalculation,
     isIce: Boolean,
+    onTempShift: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -548,11 +551,46 @@ private fun CalculationSummaryCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                SummaryItem(
-                    label = "Temperature",
-                    value = "${calculation.tempMin}–${calculation.tempMax}°C",
-                    modifier = Modifier.weight(1f)
-                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Temperature",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "−",
+                            color = LimeGreen,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier
+                                .clickable { onTempShift(-1) }
+                                .padding(horizontal = 6.dp)
+                        )
+                        Text(
+                            text = "${calculation.tempMin}–${calculation.tempMax}°C",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = LimeGreen,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "+",
+                            color = LimeGreen,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier
+                                .clickable { onTempShift(1) }
+                                .padding(horizontal = 6.dp)
+                        )
+                    }
+                }
                 SummaryItem(
                     label = "Grind",
                     value = calculation.grindSize.label,

@@ -37,7 +37,8 @@ class CalculateBrewUseCase @Inject constructor() {
         bean: CoffeeBean? = null,
         customSteps: List<com.brewmaster.domain.model.CustomStepConfig>? = null,
         customTempMin: Int? = null,
-        customTempMax: Int? = null
+        customTempMax: Int? = null,
+        useExactTemp: Boolean = false
     ): BrewCalculation {
         // Apply target profile ratio offset
         val adjustedRatio = (ratio + targetProfile.ratioOffset).coerceAtLeast(10.0)
@@ -90,7 +91,12 @@ class CalculateBrewUseCase @Inject constructor() {
         val baseTempMin = customTempMin ?: technique.defaultTempMin
         val baseTempMax = customTempMax ?: technique.defaultTempMax
 
-        if (process != null) {
+        if (useExactTemp && customTempMin != null && customTempMax != null) {
+            tempMin = customTempMin.coerceIn(80, 100)
+            tempMax = customTempMax.coerceIn(80, 100)
+            if (tempMin > tempMax) tempMin = tempMax
+            processNote = process?.extractionNote
+        } else if (process != null) {
             val finalTempMin = max(baseTempMin, process.tempMin)
             val finalTempMax = min(baseTempMax, process.tempMax)
 
@@ -108,17 +114,19 @@ class CalculateBrewUseCase @Inject constructor() {
             processNote = null
         }
 
-        // Apply target profile temp offset
-        tempMin = (tempMin + targetProfile.tempOffset).coerceIn(80, 100)
-        tempMax = (tempMax + targetProfile.tempOffset).coerceIn(80, 100)
-        if (tempMin > tempMax) tempMin = tempMax
-
-        // Apply roast-level offset: lighter roasts brew hotter, darker roasts cooler.
-        bean?.let {
-            val roastOffset = RoastLevel.fromLabel(it.roastLevel).tempOffset
-            tempMin = (tempMin + roastOffset).coerceIn(80, 100)
-            tempMax = (tempMax + roastOffset).coerceIn(80, 100)
+        if (!useExactTemp) {
+            // Apply target profile temp offset
+            tempMin = (tempMin + targetProfile.tempOffset).coerceIn(80, 100)
+            tempMax = (tempMax + targetProfile.tempOffset).coerceIn(80, 100)
             if (tempMin > tempMax) tempMin = tempMax
+
+            // Apply roast-level offset: lighter roasts brew hotter, darker roasts cooler.
+            bean?.let {
+                val roastOffset = RoastLevel.fromLabel(it.roastLevel).tempOffset
+                tempMin = (tempMin + roastOffset).coerceIn(80, 100)
+                tempMax = (tempMax + roastOffset).coerceIn(80, 100)
+                if (tempMin > tempMax) tempMin = tempMax
+            }
         }
 
         val totalBrewTimeSec = when {

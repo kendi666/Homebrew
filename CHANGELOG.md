@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Recipe card temperature** — the temperature reads on the same line as the other facts, wrapping to the next line when it does not fit, instead of a vertical stack of letters.
+- **Brew temperature** — the preview temperature has − and + and that exact range is what gets brewed and saved. Changing technique, bean, or profile picks a new suggestion.
 - **Recipe grinder** — the grinder chosen on the brew screen is stored with the recipe and shown with the grind size and dial. Notes stay free text.
 - **Brew timer** — rotating the phone, dark mode, font scale, or split-screen no longer restarts the brew. System back stops the foreground timer. Pause, reset, next, and previous update the same clock as the notification, using elapsed realtime. The screen stays on during a brew. Android 13+ asks for notification permission; if it is denied the on-screen timer still runs. The timer can run past the target, and Drawdown done records the actual time.
 - **Post-brew coach** — a brew with no taste selected no longer defaults to "stale beans or water that's too cool". Fast and slow notes use the time Drawdown done recorded.
