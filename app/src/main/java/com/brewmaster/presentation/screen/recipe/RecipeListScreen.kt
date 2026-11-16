@@ -3,6 +3,8 @@ package com.brewmaster.presentation.screen.recipe
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.content.Context
 import android.content.Intent
+import com.brewmaster.domain.model.GrindSize
 import com.brewmaster.domain.model.PersonalRecipe
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -142,18 +145,40 @@ fun RecipeListScreen(
                             ?: prettifyId(recipe.techniqueId)
                         val processLabel = state.processNames[recipe.processId]
                             ?: if (recipe.processId == 0) "No process" else "Process #${recipe.processId}"
+                        val grinderName = recipe.grinderId?.let { state.grinderNames[it] }
                         RecipeSwipeItem(
                             recipe = recipe,
                             techniqueLabel = techniqueLabel,
                             processLabel = processLabel,
+                            grinderName = grinderName,
                             onDelete = { viewModel.requestDeleteRecipe(recipe) },
-                            onShare = { shareRecipe(context, recipe, techniqueLabel) },
-                            onClick = { onRecipeSelected(recipe) }
+                            onShare = { shareRecipe(context, recipe, techniqueLabel, grinderName) },
+                            onClick = { viewModel.openRecipe(recipe) }
                         )
                     }
                     item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
             }
+        }
+
+        val open = state.recipeOpen
+        if (open != null) {
+            RecipeDetailDialog(
+                recipe = open,
+                techniqueLabel = state.techniqueNames[open.techniqueId] ?: prettifyId(open.techniqueId),
+                processLabel = state.processNames[open.processId]
+                    ?: if (open.processId == 0) "No process" else "Process #${open.processId}",
+                grinderName = open.grinderId?.let { state.grinderNames[it] },
+                onEdit = {
+                    viewModel.closeRecipe()
+                    onRecipeSelected(open)
+                },
+                onDelete = {
+                    viewModel.closeRecipe()
+                    viewModel.requestDeleteRecipe(open)
+                },
+                onDismiss = { viewModel.closeRecipe() }
+            )
         }
 
         val pending = state.recipePendingDeletion
@@ -198,6 +223,7 @@ private fun RecipeSwipeItem(
     recipe: PersonalRecipe,
     techniqueLabel: String,
     processLabel: String,
+    grinderName: String?,
     onDelete: () -> Unit,
     onShare: () -> Unit,
     onClick: () -> Unit
@@ -246,16 +272,19 @@ private fun RecipeSwipeItem(
             techniqueLabel = techniqueLabel,
             processLabel = processLabel,
             onShare = onShare,
-            onClick = onClick
+            onClick = onClick,
+            grinderName = grinderName
         )
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RecipeCard(
     recipe: PersonalRecipe,
     techniqueLabel: String,
     processLabel: String,
+    grinderName: String?,
     onShare: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -313,47 +342,10 @@ private fun RecipeCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "${recipe.coffeeWeight}g coffee",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "1:${recipe.ratio}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = recipe.grindSize.label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                recipe.grinderSetting?.let { dial ->
-                    Text(
-                        text = "dial $dial",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                if (recipe.tempMin != null && recipe.tempMax != null) {
-                    Text(
-                        text = "${recipe.tempMin}–${recipe.tempMax}°C",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                if (recipe.isIce) {
-                    Text(
-                        text = "Iced",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
-            }
+            RecipeFacts(
+                recipe = recipe,
+                grinderName = grinderName
+            )
 
             if (!recipe.notes.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
@@ -391,16 +383,106 @@ private fun formatDate(timestamp: Long): String {
 }
 
 /** Builds a human-readable message and opens the Android share sheet. */
-private fun shareRecipe(context: Context, recipe: PersonalRecipe, techniqueLabel: String) {
-    val ratio = if (recipe.ratio == recipe.ratio.toLong().toDouble()) {
-        recipe.ratio.toLong().toString()
-    } else {
-        recipe.ratio.toString()
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RecipeFacts(
+    recipe: PersonalRecipe,
+    grinderName: String?
+) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Fact("${formatAmount(recipe.coffeeWeight)}g coffee")
+        Fact("1:${formatAmount(recipe.ratio)}")
+        Fact(grindLabel(recipe.grindSize))
+        grinderName?.let { Fact(it) }
+        recipe.grinderSetting?.let { Fact("dial $it") }
+        if (recipe.tempMin != null && recipe.tempMax != null) {
+            Fact("${recipe.tempMin}–${recipe.tempMax}°C")
+        }
+        if (recipe.isIce) {
+            Text(
+                text = "Iced",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.secondary,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
     }
+}
+
+@Composable
+private fun Fact(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = 1,
+        softWrap = false
+    )
+}
+
+@Composable
+private fun RecipeDetailDialog(
+    recipe: PersonalRecipe,
+    techniqueLabel: String,
+    processLabel: String,
+    grinderName: String?,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = recipe.beanName) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = formatDate(recipe.createdAt),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "$techniqueLabel · $processLabel",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                RecipeFacts(recipe = recipe, grinderName = grinderName)
+                if (!recipe.notes.isNullOrBlank()) {
+                    Text(
+                        text = recipe.notes,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onEdit) {
+                Text(text = "Edit")
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDismiss) {
+                    Text(text = "Close")
+                }
+                TextButton(onClick = onDelete) {
+                    Text(text = "Delete", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    )
+}
+
+private fun shareRecipe(context: Context, recipe: PersonalRecipe, techniqueLabel: String, grinderName: String?) {
     val message = buildString {
         appendLine("☕ ${recipe.beanName} — Homebrew recipe")
         appendLine("Technique: $techniqueLabel")
-        appendLine("Dose ${recipe.coffeeWeight}g · 1:$ratio · ${recipe.grindSize.label}${recipe.grinderSetting?.let { " · dial $it" }.orEmpty()}${if (recipe.tempMin != null && recipe.tempMax != null) " · ${recipe.tempMin}–${recipe.tempMax}°C" else ""}${if (recipe.isIce) " · Iced" else ""}")
+        appendLine("Dose ${formatAmount(recipe.coffeeWeight)}g · 1:${formatAmount(recipe.ratio)} · ${grindLabel(recipe.grindSize)}${grinderName?.let { " · $it" }.orEmpty()}${recipe.grinderSetting?.let { " · dial $it" }.orEmpty()}${if (recipe.tempMin != null && recipe.tempMax != null) " · ${recipe.tempMin}–${recipe.tempMax}°C" else ""}${if (recipe.isIce) " · Iced" else ""}")
         if (!recipe.notes.isNullOrBlank()) appendLine("Notes: ${recipe.notes}")
     }
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
@@ -409,6 +491,16 @@ private fun shareRecipe(context: Context, recipe: PersonalRecipe, techniqueLabel
         putExtra(Intent.EXTRA_TEXT, message)
     }
     context.startActivity(Intent.createChooser(sendIntent, "Share recipe"))
+}
+
+private fun grindLabel(size: GrindSize): String = "${size.label} ${size.microns}μm"
+
+private fun formatAmount(value: Double): String {
+    return if (value == value.toLong().toDouble()) {
+        value.toLong().toString()
+    } else {
+        String.format(Locale.US, "%.2f", value).trimEnd('0').trimEnd('.')
+    }
 }
 
 /** Fallback for technique ids with no registered name, e.g. "hybrid_immersion" -> "Hybrid Immersion". */

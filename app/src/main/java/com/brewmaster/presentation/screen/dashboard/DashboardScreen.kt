@@ -354,6 +354,7 @@ fun DashboardScreen(
             calculation = calc,
             isIce = state.brewMode == BrewMode.ICE,
             dial = state.grinderClicks.ifBlank { null },
+            saveLabel = if (state.editingRecipeId != 0) "UPDATE" else "SAVE",
             onSave = viewModel::onSaveRecipeOpen,
             onStart = { onStartBrewing(calc) },
             modifier = Modifier
@@ -369,7 +370,11 @@ fun DashboardScreen(
                 currentTechniqueId = calc.technique.id,
                 currentProcessId = state.selectedProcess?.id ?: 0,
                 currentGrindSize = calc.grindSize,
+                currentGrinderName = state.selectedGrinder?.name,
                 currentGrinderSetting = state.grinderClicks.ifBlank { null },
+                initialBeanName = state.editingBeanName,
+                initialNotes = state.editingNotes,
+                isUpdate = state.editingRecipeId != 0,
                 currentTempMin = calc.tempMin,
                 currentTempMax = calc.tempMax,
                 currentRatio = state.ratio.replace(',', '.').toDoubleOrNull() ?: (calc.totalVolume / calc.coffeeWeight),
@@ -434,6 +439,7 @@ private fun StickyBrewBar(
     calculation: BrewCalculation,
     isIce: Boolean,
     dial: String?,
+    saveLabel: String,
     onSave: () -> Unit,
     onStart: () -> Unit,
     modifier: Modifier = Modifier
@@ -482,7 +488,7 @@ private fun StickyBrewBar(
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = LimeGreen)
                 ) {
-                    Text("SAVE", fontWeight = FontWeight.Bold)
+                    Text(saveLabel, fontWeight = FontWeight.Bold)
                 }
                 Button(
                     onClick = onStart,

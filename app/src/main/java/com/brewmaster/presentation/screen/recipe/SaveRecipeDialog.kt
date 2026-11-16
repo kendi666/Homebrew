@@ -38,7 +38,11 @@ fun SaveRecipeDialog(
     currentTechniqueId: String,
     currentProcessId: Int,
     currentGrindSize: GrindSize,
+    currentGrinderName: String? = null,
     currentGrinderSetting: String? = null,
+    initialBeanName: String = "",
+    initialNotes: String = "",
+    isUpdate: Boolean = false,
     currentTempMin: Int? = null,
     currentTempMax: Int? = null,
     currentRatio: Double,
@@ -48,8 +52,8 @@ fun SaveRecipeDialog(
     onSave: (beanName: String, notes: String?, tempMin: Int?, tempMax: Int?) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var beanName by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
+    var beanName by remember { mutableStateOf(initialBeanName) }
+    var notes by remember { mutableStateOf(initialNotes) }
     var beanNameError by remember { mutableStateOf(false) }
     var tempMinText by remember { mutableStateOf(currentTempMin?.toString().orEmpty()) }
     var tempMaxText by remember { mutableStateOf(currentTempMax?.toString().orEmpty()) }
@@ -73,7 +77,7 @@ fun SaveRecipeDialog(
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
-                    text = "Save Recipe",
+                    text = if (isUpdate) "Update Recipe" else "Save Recipe",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -177,7 +181,8 @@ fun SaveRecipeDialog(
 
                 ParamRow("Technique", currentTechniqueId)
                 ParamRow("Process", "#$currentProcessId")
-                ParamRow("Grind size", currentGrindSize.label)
+                ParamRow("Grind size", "${currentGrindSize.label} ${currentGrindSize.microns}μm")
+                currentGrinderName?.let { ParamRow("Grinder", it) }
                 currentGrinderSetting?.let { ParamRow("Grinder dial", it) }
                 ParamRow("Coffee", "${currentCoffeeWeight}g")
                 ParamRow("Ratio", "1:$currentRatio")
@@ -231,7 +236,7 @@ fun SaveRecipeDialog(
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
-                        Text("Save", fontWeight = FontWeight.SemiBold)
+                        Text(if (isUpdate) "Update" else "Save", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

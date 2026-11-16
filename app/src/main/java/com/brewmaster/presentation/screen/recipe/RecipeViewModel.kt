@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.brewmaster.domain.model.PersonalRecipe
 import com.brewmaster.domain.usecase.DeleteRecipeUseCase
+import com.brewmaster.domain.usecase.GetGrindersUseCase
 import com.brewmaster.domain.usecase.GetProcessPresetsUseCase
 import com.brewmaster.domain.usecase.GetRecipesUseCase
 import com.brewmaster.domain.usecase.GetTechniquesUseCase
@@ -24,7 +25,9 @@ data class RecipeUiState(
     val recipePendingDeletion: PersonalRecipe? = null,
     // Lookups so the cards can show friendly names instead of raw ids.
     val techniqueNames: Map<String, String> = emptyMap(),
-    val processNames: Map<Int, String> = emptyMap()
+    val processNames: Map<Int, String> = emptyMap(),
+    val grinderNames: Map<String, String> = emptyMap(),
+    val recipeOpen: PersonalRecipe? = null
 )
 
 @HiltViewModel
@@ -33,7 +36,8 @@ class RecipeViewModel @Inject constructor(
     private val saveRecipeUseCase: SaveRecipeUseCase,
     private val deleteRecipeUseCase: DeleteRecipeUseCase,
     private val getTechniquesUseCase: GetTechniquesUseCase,
-    private val getProcessPresetsUseCase: GetProcessPresetsUseCase
+    private val getProcessPresetsUseCase: GetProcessPresetsUseCase,
+    getGrindersUseCase: GetGrindersUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RecipeUiState())
@@ -42,7 +46,8 @@ class RecipeViewModel @Inject constructor(
     init {
         // Techniques are a static list, so resolve their names once.
         val techniqueNames = getTechniquesUseCase().associate { it.id to it.name }
-        _uiState.update { it.copy(techniqueNames = techniqueNames) }
+        val grinderNames = getGrindersUseCase().associate { it.id to it.name }
+        _uiState.update { it.copy(techniqueNames = techniqueNames, grinderNames = grinderNames) }
 
         viewModelScope.launch {
             getRecipesUseCase().collect { recipes ->
@@ -58,6 +63,14 @@ class RecipeViewModel @Inject constructor(
                 _uiState.update { it.copy(processNames = processNames) }
             }
         }
+    }
+
+    fun openRecipe(recipe: PersonalRecipe) {
+        _uiState.update { it.copy(recipeOpen = recipe) }
+    }
+
+    fun closeRecipe() {
+        _uiState.update { it.copy(recipeOpen = null) }
     }
 
     /** Ask to delete a recipe — opens the confirmation dialog instead of deleting right away. */

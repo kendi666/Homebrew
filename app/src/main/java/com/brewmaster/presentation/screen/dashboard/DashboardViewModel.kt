@@ -55,7 +55,12 @@ data class DashboardUiState(
         com.brewmaster.domain.model.CustomStepConfig(com.brewmaster.domain.model.StepAction.BLOOM, 45, 0.20),
         com.brewmaster.domain.model.CustomStepConfig(com.brewmaster.domain.model.StepAction.POUR, 135, 0.80),
     ),
-    val customWarning: String? = null
+    val customWarning: String? = null,
+    /** Non-zero while Save should revise this recipe instead of inserting another. */
+    val editingRecipeId: Int = 0,
+    val editingCreatedAt: Long = 0L,
+    val editingBeanName: String = "",
+    val editingNotes: String = ""
 )
 
 @HiltViewModel
@@ -307,9 +312,11 @@ class DashboardViewModel @Inject constructor(
             null
         }
 
+        val editing = state.editingRecipeId != 0
         viewModelScope.launch {
             saveRecipeUseCase(
                 PersonalRecipe(
+                    id = if (editing) state.editingRecipeId else 0,
                     beanName = beanName,
                     techniqueId = technique.id,
                     processId = state.selectedProcess?.id ?: 0,
@@ -319,16 +326,22 @@ class DashboardViewModel @Inject constructor(
                     isIce = state.brewMode == BrewMode.ICE,
                     iceWeight = iceWeight,
                     notes = notes,
-                    createdAt = System.currentTimeMillis(),
+                    createdAt = if (editing) state.editingCreatedAt else System.currentTimeMillis(),
                     grinderSetting = state.grinderClicks.ifBlank { null },
                     tempMin = tempMin ?: state.calculation?.tempMin,
                     tempMax = tempMax ?: state.calculation?.tempMax,
-                    grinderId = state.selectedGrinder?.id?.takeIf { state.grinderClicks.isNotBlank() },
+                    grinderId = state.selectedGrinder?.id,
                     targetProfile = state.targetProfile,
                     customSteps = state.customSteps.takeIf { technique.id == "custom" }
                 )
             )
-            _uiState.update { it.copy(showSaveRecipeDialog = false) }
+            _uiState.update {
+                it.copy(
+                    showSaveRecipeDialog = false,
+                    editingBeanName = if (editing) beanName else it.editingBeanName,
+                    editingNotes = if (editing) notes.orEmpty() else it.editingNotes
+                )
+            }
         }
     }
 
@@ -367,7 +380,11 @@ class DashboardViewModel @Inject constructor(
                 targetProfile = recipe.targetProfile ?: it.targetProfile,
                 customSteps = recipe.customSteps ?: it.customSteps,
                 customTempMin = recipe.tempMin ?: it.customTempMin,
-                customTempMax = recipe.tempMax ?: it.customTempMax
+                customTempMax = recipe.tempMax ?: it.customTempMax,
+                editingRecipeId = recipe.id,
+                editingCreatedAt = recipe.createdAt,
+                editingBeanName = recipe.beanName,
+                editingNotes = recipe.notes.orEmpty()
             )
         }
         suggestionTemps = if (recipe.tempMin != null && recipe.tempMax != null) {

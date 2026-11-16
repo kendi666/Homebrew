@@ -8,5 +8,10 @@ class SaveRecipeUseCase @Inject constructor(
     private val repository: RecipeRepository
 ) {
 
-    suspend operator fun invoke(recipe: PersonalRecipe): Long = repository.saveRecipe(recipe)
+    /** A recipe with an id replaces that row. A new recipe is inserted. */
+    suspend operator fun invoke(recipe: PersonalRecipe): Long {
+        if (recipe.id == 0) return repository.saveRecipe(recipe)
+        repository.updateRecipe(recipe)
+        return recipe.id.toLong()
+    }
 }

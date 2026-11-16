@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Edit a saved recipe** — My Recipes opens the saved cup, and Edit loads it back onto the brew screen. Update revises that recipe instead of saving another copy.
 - **Ready countdown** — a new brew shows Be Ready and counts 3, 2, 1 with a beep before the clock starts. Those seconds are not part of the recipe.
 - **Save to journal from the coach** — rate the cup 1–5 after Drawdown done and it goes to the journal with the bean, technique, grind, temperature, taste note, grinder dial, and the actual brew time.
 - **Journal dial and time** — journal entries show the grinder and dial used and the brew time (database v9).
@@ -65,6 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wide Pause / Next step buttons with Prev step · Reset as text actions.
 
 ### Fixed
+- **Recipe card temperature** — the temperature reads on the same line as the other facts, wrapping to the next line when it does not fit, instead of a vertical stack of letters.
+- **Recipe grinder** — the grinder chosen on the brew screen is stored with the recipe and shown with the grind size and dial. Notes stay free text.
 - **Brew timer** — rotating the phone, dark mode, font scale, or split-screen no longer restarts the brew. System back stops the foreground timer. Pause, reset, next, and previous update the same clock as the notification, using elapsed realtime. The screen stays on during a brew. Android 13+ asks for notification permission; if it is denied the on-screen timer still runs. The timer can run past the target, and Drawdown done records the actual time.
 - **Post-brew coach** — a brew with no taste selected no longer defaults to "stale beans or water that's too cool". Fast and slow notes use the time Drawdown done recorded.
 - **Stale results** — clearing coffee weight, or entering 0, clears the brew numbers so Start cannot use the previous cup. An invalid grind-convert dial or micron clears the previous conversion.
